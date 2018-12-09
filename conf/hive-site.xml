@@ -19,4 +19,122 @@
 
 <configuration>
 
+  <!-- Metastore Configs -->
+
+  <property>
+    <name>hive.metastore.warehouse.dir</name>
+    <!--<value>/user/hive/warehouse</value>-->
+    <value>/user/hive-2.3.4/warehouse</value>
+    <description>location of default database for the warehouse</description>
+  </property>
+
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://proj99:9081</value>
+    <description>Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.</description>
+  </property>
+
+
+  <!-- Data Storage Configs -->
+
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://proj99:9000</value>
+  </property>
+
+  <!-- Tez Engine -->
+  <property>
+    <name>hive.jar.directory</name>
+    <value>hdfs://proj99:9000/apps/tez-0.8.5/tez.tar.gz</value>
+  </property>
+
+  <!-- Spark Engine -->
+
+  <property>
+    <name>hive.execution.engine</name>
+    <value>spark</value>
+  </property>
+  <property>
+    <name>spark.master</name>
+    <!--<value>spark://w1:7077</value>-->
+    <value>yarn</value>
+  </property>
+  <property>
+    <name>spark.eventLog.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>spark.eventLog.dir</name>
+    <value>hdfs://proj99:9000/spark-2.4</value>
+  </property>
+  <property>
+    <name>spark.history.fs.logDirectory</name>
+    <value>hdfs://proj99:9000/spark-2.4</value>
+  </property>
+  <property>
+    <name>spark.serializer</name>
+    <value>org.apache.spark.serializer.KryoSerializer</value>
+  </property>
+  <property>
+    <name>spark.driver.memory</name>
+    <value>5g</value>
+  </property>
+  <property>
+    <name>spark.executor.memory</name>
+    <value>10g</value>
+  </property>
+
+
+  <!-- Authentication -->
+  <property>
+    <name>hive.server2.enable.doAs</name>
+    <value>false</value>
+   </property>
+  <property>
+    <name>hadoop.proxyuser.hduser.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.hduser.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.tati.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.tati.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.byli.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.byli.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.xdsun.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.xdsun.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.zkcai.groups</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.zkcai.hosts</name>
+    <value>*</value>
+  </property>
+
+  <property>
+     <name>spark.yarn.jars</name>
+     <value>hdfs://proj99:9000/spark-jars/*</value>
+  </property>
+
+
 </configuration>
