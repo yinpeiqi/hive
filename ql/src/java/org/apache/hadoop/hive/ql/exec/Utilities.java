@@ -115,6 +115,7 @@ import org.apache.hadoop.hive.ql.Driver.LockedDriverState;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
+import org.apache.hadoop.hive.ql.exec.axe.AXETask;
 import org.apache.hadoop.hive.ql.exec.mr.ExecDriver;
 import org.apache.hadoop.hive.ql.exec.mr.ExecMapper;
 import org.apache.hadoop.hive.ql.exec.mr.ExecReducer;
@@ -2631,8 +2632,29 @@ public final class Utilities {
     return getTasks(tasks, new TaskFilterFunction<>(ExecDriver.class));
   }
 
+  private static void getAXETasks(List<Task<? extends Serializable>> tasks,
+      List<AXETask> axeTasks) {
+    for (Task<? extends Serializable> task : tasks) {
+      if ((task instanceof AXETask) && !axeTasks.contains(task)) {
+        axeTasks.add((AXETask) task);
+      }
+
+      if (task.getDependentTasks() != null) {
+        getAXETasks(task.getDependentTasks(), axeTasks);
+      }
+    }
+  }
+
+  public static List<AXETask> getAXETasks(List<Task<? extends Serializable>> tasks) {
+    List<AXETask> axeTasks = new ArrayList<>();
+    if (tasks != null) {
+      getAXETasks(tasks, axeTasks);
+    }
+    return axeTasks;
+  }
+
   public static int getNumClusterJobs(List<Task<? extends Serializable>> tasks) {
-    return getMRTasks(tasks).size() + getTezTasks(tasks).size() + getSparkTasks(tasks).size();
+    return getMRTasks(tasks).size() + getTezTasks(tasks).size() + getSparkTasks(tasks).size() + getAXETasks(tasks).size();
   }
 
   static class TaskFilterFunction<T> implements DAGTraversal.Function {

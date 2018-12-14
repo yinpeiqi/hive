@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.exec.axe.AXETask;
+import org.apache.hadoop.hive.ql.exec.axe.AXEWork;
 import org.apache.hadoop.hive.ql.exec.mr.MapRedTask;
 import org.apache.hadoop.hive.ql.exec.mr.MapredLocalTask;
 import org.apache.hadoop.hive.ql.exec.repl.ReplDumpTask;
@@ -113,6 +115,8 @@ public final class TaskFactory {
     taskvec.add(new TaskTuple<>(ReplStateLogWork.class, ReplStateLogTask.class));
     taskvec.add(new TaskTuple<ExportWork>(ExportWork.class, ExportTask.class));
     taskvec.add(new TaskTuple<ReplTxnWork>(ReplTxnWork.class, ReplTxnTask.class));
+    taskvec.add(new TaskTuple<>(AXEWork.class, AXETask.class));
+
   }
 
   private static ThreadLocal<Integer> tid = new ThreadLocal<Integer>() {
