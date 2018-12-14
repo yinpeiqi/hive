@@ -1785,7 +1785,7 @@ public class Driver implements CommandProcessor {
       setQueryDisplays(plan.getRootTasks());
       int mrJobs = Utilities.getMRTasks(plan.getRootTasks()).size();
       int jobs = mrJobs + Utilities.getTezTasks(plan.getRootTasks()).size()
-          + Utilities.getSparkTasks(plan.getRootTasks()).size();
+          + Utilities.getSparkTasks(plan.getRootTasks()).size() + Utilities.getAXETasks(plan.getRootTasks()).size();
       if (jobs > 0) {
         logMrWarning(mrJobs);
         console.printInfo("Query ID = " + queryId);

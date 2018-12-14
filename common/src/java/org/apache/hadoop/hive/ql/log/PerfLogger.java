@@ -83,6 +83,8 @@ public class PerfLogger {
   public static final String SPARK_OPTIMIZE_TASK_TREE = "SparkOptimizeTaskTree";
   public static final String SPARK_FLUSH_HASHTABLE = "SparkFlushHashTable.";
 
+  public static final String AXE_GENERATE_TASK_TREE = "AXEGenerateTaskTree";
+
   protected final Map<String, Long> startTimes = new HashMap<String, Long>();
   protected final Map<String, Long> endTimes = new HashMap<String, Long>();
 

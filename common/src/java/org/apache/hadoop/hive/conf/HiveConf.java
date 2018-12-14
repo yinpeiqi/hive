@@ -427,6 +427,7 @@ public class HiveConf extends Configuration {
    */
   public static enum ConfVars {
     // QL execution stuff
+    AXE_JOB_DESC_PATH("axe.job.desc.path", "/tmp/axe/job.json", "AXE job desc json path. Used to submit a SQL job."),
     SCRIPTWRAPPER("hive.exec.script.wrapper", null, ""),
     PLAN("hive.exec.plan", "", ""),
     STAGINGDIR("hive.exec.stagingdir", ".hive-staging",
@@ -2703,8 +2704,8 @@ public class HiveConf extends Configuration {
     HIVE_DECODE_PARTITION_NAME("hive.decode.partition.name", false,
         "Whether to show the unquoted partition names in query results."),
 
-    HIVE_EXECUTION_ENGINE("hive.execution.engine", "mr", new StringSet("mr", "tez", "spark"),
-        "Chooses execution engine. Options are: mr (Map reduce, default), tez, spark. While MR\n" +
+    HIVE_EXECUTION_ENGINE("hive.execution.engine", "mr", new StringSet("mr", "tez", "spark", "axe"),
+        "Chooses execution engine. Options are: mr (Map reduce, default), tez, spark, axe. While MR\n" +
         "remains the default engine for historical reasons, it is itself a historical engine\n" +
         "and is deprecated in Hive 2 line. It may be removed without further warning."),
 
