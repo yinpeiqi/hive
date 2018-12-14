@@ -428,6 +428,7 @@ public class HiveConf extends Configuration {
   public static enum ConfVars {
     // QL execution stuff
     AXE_JOB_DESC_PATH("axe.job.desc.path", "/tmp/axe/job.json", "AXE job desc json path. Used to submit a SQL job."),
+    AXE_JOB_SUBMIT("axe.job.submit", "echo", "The path of the submit script."),
     SCRIPTWRAPPER("hive.exec.script.wrapper", null, ""),
     PLAN("hive.exec.plan", "", ""),
     STAGINGDIR("hive.exec.stagingdir", ".hive-staging",

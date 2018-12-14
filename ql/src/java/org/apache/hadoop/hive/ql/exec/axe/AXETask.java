@@ -25,30 +25,43 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AXETask extends Task<AXEWork> {
-  private static final String CLASS_NAME = AXETask.class.getName();
   protected final Logger LOG = LoggerFactory.getLogger(AXETask.class);
   private Gson gson = new GsonBuilder().disableHtmlEscaping().create();
   private String jsonPath;
+  private String jobSubmit;
 
   @Override protected int execute(final DriverContext driverContext) {
     int rc = 0;
     jsonPath = this.conf.getVar(HiveConf.ConfVars.AXE_JOB_DESC_PATH);
-    generateJobSpecJson(driverContext);
+    jobSubmit = conf.getVar(HiveConf.ConfVars.AXE_JOB_SUBMIT);
+    generateJobSpecJson();
+    System.out.println("JobDesc json is written to " + jsonPath);
     submitToAXE(driverContext);
     return rc;
   }
 
   private void submitToAXE(DriverContext driverContext) {
-    // FIXME: job submission setting
+    try {
+      AXEClient client = new AXEClient(driverContext);
+      client.submitJob(jobSubmit, jsonPath);
+    } catch (IOException e) {
+      LOG.error(e.getMessage());
+      e.printStackTrace();
+    }
   }
 
-  private void generateJobSpecJson(DriverContext driverContext) {
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  private void generateJobSpecJson() {
     AXEJobDesc jobDesc = new AXEJobDesc();
 
+    Map<BaseWork, AXEOperator> workAXEOperatorMap = new HashMap<>();
     // Specify tasks
     for (BaseWork task : work.getAllWork()) {
       String taskName = task.getName();
@@ -58,11 +71,12 @@ public class AXETask extends Task<AXEWork> {
           Preconditions.checkArgument(ops.getValue() instanceof TableScanOperator,
                                       "The root of MapWork is expected to be a TableScanOperator, but was "
                                           + ops.getValue().getClass().getName());
-          jobDesc.addMapTask(taskName, (TableScanOperator) ops.getValue());
+          AXEOperator operator = jobDesc.addMapTask(taskName, (TableScanOperator) ops.getValue());
+          workAXEOperatorMap.put(mapWork, operator);
         }
       } else if (task instanceof ReduceWork) {
         ReduceWork reduceWork = (ReduceWork) task;
-        jobDesc.addReduceTask(taskName, reduceWork.getReducer());
+        workAXEOperatorMap.put(reduceWork, jobDesc.addReduceTask(taskName, reduceWork.getReducer()));
       } else {
         throw new IllegalStateException("AssertionError: expected either MapWork or ReduceWork, "
                                             + "but found " + work.getClass().getName());
@@ -70,8 +84,9 @@ public class AXETask extends Task<AXEWork> {
     }
 
     // Specify dependency
+    Set<BaseWork> expandedWork = new HashSet<>();
     for (BaseWork task : work.getRoots()) {
-      addDependenciesToJson(task);
+      addDependenciesToJson(task, workAXEOperatorMap, expandedWork);
     }
 
     // Write to json file
@@ -88,11 +103,19 @@ public class AXETask extends Task<AXEWork> {
     }
   }
 
-  private void addDependenciesToJson(BaseWork task) {
+  private void addDependenciesToJson(BaseWork task, Map<BaseWork, AXEOperator> workAXEOperatorMap,
+      Set<BaseWork> expandedWork) {
+    if (expandedWork.contains(task)) {
+      return;
+    }
+    expandedWork.add(task);
+    AXEOperator parentOp = workAXEOperatorMap.get(task);
     List<BaseWork> children = work.getChildren(task);
     for (BaseWork child : children) {
-      // FIXME: specify in json
-      addDependenciesToJson(child);
+      AXEOperator childOp = workAXEOperatorMap.get(child);
+      parentOp.addChild(childOp.id);
+      childOp.addParent(parentOp.id);
+      addDependenciesToJson(child, workAXEOperatorMap, expandedWork);
     }
   }
 

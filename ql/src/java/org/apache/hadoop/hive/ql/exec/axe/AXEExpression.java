@@ -20,7 +20,7 @@ class AXEExpression {
   private List<AXEExprNode> constLeafNodeInfos;
   private List<AXEExprNode> tableFieldNodeInfos;
 
-  AXEExpression(final ExprNodeDesc exprNodeDesc, Map<String, Integer> inputColIndex) {
+  AXEExpression(final ExprNodeDesc exprNodeDesc) {
     int nodeCounter = 0;
     internalNodeInfos = new ArrayList<>();
     constLeafNodeInfos = new ArrayList<>();
@@ -28,10 +28,18 @@ class AXEExpression {
 
     Deque<ObjectPair<ExprNodeDesc, Integer>> queue = new LinkedList<>();
     int nodeId = nodeCounter++;
-    nodeCounter = processExpr(nodeId, exprNodeDesc, queue, nodeCounter, inputColIndex);
+    nodeCounter = processExpr(nodeId, exprNodeDesc, queue, nodeCounter);
     while (!queue.isEmpty()) {
       ObjectPair<ExprNodeDesc, Integer> pair = queue.pop();
-      nodeCounter = processExpr(pair.getSecond(), pair.getFirst(), queue, nodeCounter, inputColIndex);
+      nodeCounter = processExpr(pair.getSecond(), pair.getFirst(), queue, nodeCounter);
+    }
+  }
+
+  AXEExpression(final ExprNodeDesc exprNodeDesc, Map<String, Integer> inputColIndex) {
+    this(exprNodeDesc);
+    for (AXEExprNode node : tableFieldNodeInfos) {
+      node.col = inputColIndex.get(node.value);
+      node.value = null;
     }
   }
 
@@ -48,7 +56,7 @@ class AXEExpression {
   }
 
   private int processExpr(int nodeId, ExprNodeDesc exprNodeDesc, Deque<ObjectPair<ExprNodeDesc, Integer>> queue,
-      int nodeCounter, Map<String, Integer> inputColIndex) {
+      int nodeCounter) {
     AXEExprNode node = new AXEExprNode(nodeId);
     if (exprNodeDesc instanceof ExprNodeGenericFuncDesc) {
       ExprNodeGenericFuncDesc funcDesc = (ExprNodeGenericFuncDesc) exprNodeDesc;
@@ -62,7 +70,7 @@ class AXEExpression {
     } else if (exprNodeDesc instanceof ExprNodeColumnDesc) {
       ExprNodeColumnDesc columnDesc = (ExprNodeColumnDesc) exprNodeDesc;
       node.type = "column";
-      node.col = inputColIndex.get(columnDesc.getColumn());
+      node.value = columnDesc.getColumn();
       node.tableName = columnDesc.getTabAlias();
       tableFieldNodeInfos.add(node);
     } else if (exprNodeDesc instanceof ExprNodeConstantDesc) {
