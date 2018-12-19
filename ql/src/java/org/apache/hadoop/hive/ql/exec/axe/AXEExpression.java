@@ -69,7 +69,7 @@ class AXEExpression {
       internalNodeInfos.add(node);
     } else if (exprNodeDesc instanceof ExprNodeColumnDesc) {
       ExprNodeColumnDesc columnDesc = (ExprNodeColumnDesc) exprNodeDesc;
-      node.type = "column";
+      node.type = columnDesc.getTypeString();
       node.value = columnDesc.getColumn();
       node.tableName = columnDesc.getTabAlias();
       tableFieldNodeInfos.add(node);

@@ -11,8 +11,8 @@ import java.util.Map;
 public class AXEReduceSinkOperator extends AXEOperator {
 
   private List<AXEExpression> partitionKey;
-  private List<Integer> reduceKeyColumns;
-  private List<Integer> reduceValueColumns;
+  private List<String> reduceKeyColumns;
+  private List<String> reduceValueColumns;
   private String reduceSortOrder;
 
   AXEReduceSinkOperator(int id) {
@@ -28,7 +28,7 @@ public class AXEReduceSinkOperator extends AXEOperator {
     // TODO(tatiana): support algorithmic operations in reduce key?
     for (ExprNodeDesc expr : keyCols) {
       if (expr instanceof ExprNodeColumnDesc) {
-        reduceKeyColumns.add(inputColIndex.get(((ExprNodeColumnDesc) expr).getColumn()));
+        reduceKeyColumns.add(((ExprNodeColumnDesc) expr).getColumn());
       } else {
         throw new IllegalStateException("Reduce key of type " + expr.getClass().getName() + " not supported yet");
       }
@@ -44,7 +44,7 @@ public class AXEReduceSinkOperator extends AXEOperator {
     // TODO(tatiana): support algorithmic operations in reduce key?
     for (ExprNodeDesc expr : valueCols) {
       if (expr instanceof ExprNodeColumnDesc) {
-        reduceValueColumns.add(inputColIndex.get(((ExprNodeColumnDesc) expr).getColumn()));
+        reduceValueColumns.add(((ExprNodeColumnDesc) expr).getColumn());
       } else {
         throw new IllegalStateException("Reduce value of type " + expr.getClass().getName() + " not supported yet");
       }
@@ -58,7 +58,7 @@ public class AXEReduceSinkOperator extends AXEOperator {
     }
     partitionKey = new ArrayList<>();
     for (ExprNodeDesc expr : partitionCols) {
-      partitionKey.add(new AXEExpression(expr, inputColIndex));
+      partitionKey.add(new AXEExpression(expr));
     }
   }
 
