@@ -65,14 +65,10 @@ class AXEJobDesc {
         tsOp.addFilterDesc(new AXEExpression(((FilterOperator) operator).getConf().getPredicate(), inputColIndex));
       } else if (operator instanceof SelectOperator) {
         addSelect(tsOp, (SelectOperator) operator);
-        tsOp.translateColNameToIndex(inputColIndex);
         int projectSize = tsOp.projectCols.size();
         final List<String> outputColumnNames = ((SelectOperator) operator).getConf().getOutputColumnNames();
         Preconditions.checkArgument(outputColumnNames.size() == projectSize,
                                     "Output column size does not match project column size");
-        for (int i = 0; i < projectSize; ++i) {
-          inputColIndex.put(outputColumnNames.get(i), tsOp.projectCols.get(i));
-        }
       } else {
         return children;
       }
@@ -141,10 +137,19 @@ class AXEJobDesc {
       op = addReduceSinkOperator((ReduceSinkOperator) operator, inputColIndex);
     } else if (operator instanceof JoinOperator) {
       op = addJoinOperator((JoinOperator) operator);
+    } else if (operator instanceof FilterOperator) {
+      op = addFilterOperator((FilterOperator) operator);
     } else {
-      throw new IllegalStateException("Unsupported child operator " + operator.getClass().getName());
+      throw new IllegalStateException(
+          "[AXEJobDesc.addOperator] Unsupported child operator " + operator.getClass().getName());
     }
     return op;
+  }
+
+  private AXEOperator addFilterOperator(final FilterOperator operator) {
+    AXEFilterOperator filterOp = new AXEFilterOperator(addTask(operator.getName()));
+    filterOp.addFilterDesc(new AXEExpression(operator.getConf().getPredicate()));
+    return filterOp;
   }
 
   private AXEJoinOperator addJoinOperator(final JoinOperator operator) { //, final Map<String, Integer> inputColIndex

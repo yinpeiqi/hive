@@ -1,6 +1,5 @@
 package org.apache.hadoop.hive.ql.exec.axe;
 
-import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 
 import java.util.ArrayList;
@@ -11,8 +10,8 @@ import java.util.Map;
 public class AXEReduceSinkOperator extends AXEOperator {
 
   private List<AXEExpression> partitionKey;
-  private List<String> reduceKeyColumns;
-  private List<String> reduceValueColumns;
+  private List<AXEExpression> reduceKeyColumns;
+  private List<AXEExpression> reduceValueColumns;
   private String reduceSortOrder;
 
   AXEReduceSinkOperator(int id) {
@@ -25,13 +24,8 @@ public class AXEReduceSinkOperator extends AXEOperator {
       return;
     }
     reduceKeyColumns = new ArrayList<>();
-    // TODO(tatiana): support algorithmic operations in reduce key?
     for (ExprNodeDesc expr : keyCols) {
-      if (expr instanceof ExprNodeColumnDesc) {
-        reduceKeyColumns.add(((ExprNodeColumnDesc) expr).getColumn());
-      } else {
-        throw new IllegalStateException("Reduce key of type " + expr.getClass().getName() + " not supported yet");
-      }
+      reduceKeyColumns.add(new AXEExpression(expr));
     }
   }
 
@@ -41,13 +35,8 @@ public class AXEReduceSinkOperator extends AXEOperator {
       return;
     }
     reduceValueColumns = new ArrayList<>();
-    // TODO(tatiana): support algorithmic operations in reduce key?
     for (ExprNodeDesc expr : valueCols) {
-      if (expr instanceof ExprNodeColumnDesc) {
-        reduceValueColumns.add(((ExprNodeColumnDesc) expr).getColumn());
-      } else {
-        throw new IllegalStateException("Reduce value of type " + expr.getClass().getName() + " not supported yet");
-      }
+      reduceValueColumns.add(new AXEExpression(expr));
     }
   }
 
