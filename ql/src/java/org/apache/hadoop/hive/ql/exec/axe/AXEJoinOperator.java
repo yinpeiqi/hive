@@ -31,17 +31,6 @@ class AXEJoinOperator extends AXEOperator {
         }
       }
     }
-
-    // check
-    for (List<JoinColumn> tableJoinKey : joinTableColumns) {
-      String table = tableJoinKey.get(0).table;
-      for (JoinColumn column : tableJoinKey) {
-        if (!table.equals(column.table)) {
-          throw new IllegalStateException("The columns within one table is not associated with the same table alias : "
-                                              + table + " vs " + column.table);
-        }
-      }
-    }
   }
 
   /* In JoinCondDesc
