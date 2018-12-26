@@ -66,6 +66,7 @@ import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.UnionOperator;
 import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.exec.axe.AXEWork;
 import org.apache.hadoop.hive.ql.exec.mr.ExecDriver;
 import org.apache.hadoop.hive.ql.exec.mr.MapRedTask;
 import org.apache.hadoop.hive.ql.exec.spark.SparkTask;
@@ -1491,6 +1492,11 @@ public final class GenMapRedUtils {
       }
     } else if (currTask.getWork() instanceof SparkWork) {
       SparkWork work = (SparkWork) currTask.getWork();
+      for (BaseWork w: work.getAllWork()) {
+        w.setGatheringStats(true);
+      }
+    } else if (currTask.getWork() instanceof AXEWork) {
+      AXEWork work = (AXEWork) currTask.getWork();
       for (BaseWork w: work.getAllWork()) {
         w.setGatheringStats(true);
       }

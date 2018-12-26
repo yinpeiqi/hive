@@ -67,6 +67,9 @@ public class AXETask extends Task<AXEWork> {
       String taskName = task.getName();
       if (task instanceof MapWork) {
         MapWork mapWork = (MapWork) task;
+        if (mapWork.getAliasToWork().size() != 1) {
+          LOG.warn("MapWork not a chain, with " + mapWork.getAliasToWork().size() + " children!");
+        }
         for (Map.Entry<String, Operator<? extends OperatorDesc>> ops : mapWork.getAliasToWork().entrySet()) {
           Preconditions.checkArgument(ops.getValue() instanceof TableScanOperator,
                                       "The root of MapWork is expected to be a TableScanOperator, but was "
