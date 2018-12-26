@@ -19,6 +19,9 @@ import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 
 import com.google.common.base.Preconditions;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +30,7 @@ import java.util.Objects;
 
 class AXEJobDesc {
   final public Output output;
+  protected final Logger LOG = LoggerFactory.getLogger(AXETask.class);
   private final Map<String, Integer> taskNameToId;
   private final Map<String, Integer> tableNameToId;
   private int counter;
@@ -73,6 +77,8 @@ class AXEJobDesc {
         return children;
       }
       return tryPushChildrenIntoTableScan(tsOp, operator.getChildOperators(), inputColIndex);
+    } else if (children.size() > 1) {
+      LOG.warn("MapWork not a chain, with " + children.size() + " branches!");
     }
     return children;
   }
@@ -113,7 +119,12 @@ class AXEJobDesc {
   private void addNext(AXEOperator op, final List<Operator<? extends OperatorDesc>> childOperators,
       final Map<String, Integer> inputColIndex) {
     if (childOperators == null || childOperators.isEmpty()) {
+      if (!((op instanceof AXEReduceSinkOperator) || (op instanceof AXEFileSinkOperator))) {
+        LOG.warn("The tail of work is not RS or FS: " + op.getClass().getName());
+      }
       return;
+    } else if (childOperators.size() > 1) {
+      LOG.warn("addNext: current work not a chain, with " + childOperators.size() + " branches!");
     }
     for (Operator<? extends OperatorDesc> childOperator : childOperators) {
       AXEOperator childOp = addOperator(childOperator, inputColIndex);
