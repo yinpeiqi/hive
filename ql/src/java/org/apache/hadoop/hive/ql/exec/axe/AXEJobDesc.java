@@ -160,6 +160,7 @@ class AXEJobDesc {
   private AXEOperator addFilterOperator(final FilterOperator operator) {
     AXEFilterOperator filterOp = new AXEFilterOperator(addTask(operator.getName()));
     filterOp.addFilterDesc(new AXEExpression(operator.getConf().getPredicate()));
+    output.filterOperators.add(filterOp);
     return filterOp;
   }
 
@@ -256,6 +257,7 @@ class AXEJobDesc {
     List<AXELimitOperator> limitOperators;
     List<AXEGroupByOperator> groupByOperators;
     List<AXEJoinOperator> joinOperators;
+    List<AXEFilterOperator> filterOperators;
 
     Output() {
       srcTables = new ArrayList<>();
@@ -266,6 +268,7 @@ class AXEJobDesc {
       groupByOperators = new ArrayList<>();
       joinOperators = new ArrayList<>();
       reduceSinkOperators = new ArrayList<>();
+      filterOperators = new ArrayList<>();
     }
   }
 
