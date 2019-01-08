@@ -13,6 +13,9 @@ public class AXEReduceSinkOperator extends AXEOperator {
   private List<AXEExpression> reduceKeyColumns;
   private List<AXEExpression> reduceValueColumns;
   private String reduceSortOrder;
+  List<String> reduceKeyColumnNames;
+  List<String> reduceValueColumnNames;
+  String reduceOutputName;
 
   AXEReduceSinkOperator(int id) {
     super(id);

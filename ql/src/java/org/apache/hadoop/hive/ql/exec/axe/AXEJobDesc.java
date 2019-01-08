@@ -87,10 +87,9 @@ class AXEJobDesc {
       final Map<String, Integer> inputColIndex) {
     AXEReduceSinkOperator rsOp = new AXEReduceSinkOperator(addTask(operator.getName()));
 
-    // String reduceOutputName = operator.getReduceOutputName();
-    // FIXME: match cols, e.g. [reducesinkkey0, reducesinkkey1]
-    // List<String> keyColNames = operator.getConf().getOutputKeyColumnNames();
-    // List<String> valueColNames = operator.getConf().getOutputValueColumnNames(); // e.g. [_col0, _col1]
+    rsOp.reduceOutputName = operator.getReduceOutputName();
+    rsOp.reduceKeyColumnNames = operator.getConf().getOutputKeyColumnNames();
+    rsOp.reduceValueColumnNames = operator.getConf().getOutputValueColumnNames(); // e.g. [_col0, _col1]
     // TODO(tatiana): do not understand what this is: int[] valueIdx = operator.getValueIndex();
     rsOp.setReduceKey(operator.getConf().getKeyCols(), inputColIndex);
     rsOp.setReduceValue(operator.getConf().getValueCols(), inputColIndex);
