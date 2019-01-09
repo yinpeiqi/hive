@@ -60,6 +60,7 @@ class AXEExpression {
     AXEExprNode node = new AXEExprNode(nodeId);
     if (exprNodeDesc instanceof ExprNodeGenericFuncDesc) {
       ExprNodeGenericFuncDesc funcDesc = (ExprNodeGenericFuncDesc) exprNodeDesc;
+      node.type = funcDesc.getTypeString();
       node.func = getFuncText(funcDesc);
       node.children = new ArrayList<>();
       for (ExprNodeDesc child : funcDesc.getChildren()) {

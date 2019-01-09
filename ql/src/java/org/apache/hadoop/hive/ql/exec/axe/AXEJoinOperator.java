@@ -5,9 +5,14 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.JoinCondDesc;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 class AXEJoinOperator extends AXEOperator {
+  Byte[] tagOrder;
+  Map<Byte, List<AXEExpression>> joinValueExprs;
+  List<String> outputColumnNames;
   private List<List<JoinColumn>> joinTableColumns;
   private List<JoinCondition> joinConditions;
 
@@ -29,6 +34,17 @@ class AXEJoinOperator extends AXEOperator {
           throw new IllegalStateException(
               "Expected only column desc in join keys, but got " + joinKeys[keyIdx][k].getClass().getName());
         }
+      }
+    }
+  }
+
+  void setJoinValueExprs(final Map<Byte, List<ExprNodeDesc>> joinValueExprs) {
+    this.joinValueExprs = new HashMap<>();
+    for (Map.Entry<Byte, List<ExprNodeDesc>> entry : joinValueExprs.entrySet()) {
+      List<AXEExpression> axeExprs = new ArrayList<>();
+      this.joinValueExprs.put(entry.getKey(), axeExprs);
+      for (ExprNodeDesc expr : entry.getValue()) {
+        axeExprs.add(new AXEExpression(expr));
       }
     }
   }

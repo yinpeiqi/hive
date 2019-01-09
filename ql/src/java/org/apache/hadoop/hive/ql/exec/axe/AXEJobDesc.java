@@ -165,6 +165,9 @@ class AXEJobDesc {
 
   private AXEJoinOperator addJoinOperator(final JoinOperator operator) { //, final Map<String, Integer> inputColIndex
     AXEJoinOperator joinOp = new AXEJoinOperator(addTask(operator.getName()));
+    joinOp.tagOrder = operator.getConf().getTagOrder();
+    joinOp.outputColumnNames = operator.getConf().getOutputColumnNames();
+    joinOp.setJoinValueExprs(operator.getConf().getExprs());
     joinOp.setJoinKeys(operator.getConf().getJoinKeys());
     joinOp.setJoinConditions(operator.getConf().getConds());
     output.joinOperators.add(joinOp);
