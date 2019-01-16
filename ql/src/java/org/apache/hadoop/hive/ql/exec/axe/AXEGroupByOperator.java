@@ -12,6 +12,7 @@ class AXEGroupByOperator extends AXEOperator {
   private List<AXEExpression> aggregatorKeys;
   private List<Aggregator> aggregators;
   private String mode;
+  List<String> outputColumnNames;
 
   AXEGroupByOperator(int id) {
     super(id);

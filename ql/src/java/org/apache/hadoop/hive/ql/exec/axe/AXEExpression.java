@@ -35,14 +35,6 @@ class AXEExpression {
     }
   }
 
-  AXEExpression(final ExprNodeDesc exprNodeDesc, Map<String, Integer> inputColIndex) {
-    this(exprNodeDesc);
-    for (AXEExprNode node : tableFieldNodeInfos) {
-      node.col = inputColIndex.get(node.value);
-      node.value = null;
-    }
-  }
-
   private static String getFuncText(final ExprNodeGenericFuncDesc funcDesc) {
     if (funcDesc.getFuncText() != null) {
       return funcDesc.getFuncText();
@@ -77,8 +69,14 @@ class AXEExpression {
     } else if (exprNodeDesc instanceof ExprNodeConstantDesc) {
       ExprNodeConstantDesc constantDesc = (ExprNodeConstantDesc) exprNodeDesc;
       node.type = constantDesc.getTypeString();
-      node.value = constantDesc.getExprString();
+      if (constantDesc.getTypeString().equals("string")) {
+        node.value = constantDesc.getValue().toString();
+      } else {
+        node.value = constantDesc.getExprString();
+      }
       constLeafNodeInfos.add(node);
+    } else {
+      throw new IllegalStateException("Unexpected ExprNodeDesc type " + exprNodeDesc.getClass().getName());
     }
     return nodeCounter;
   }
