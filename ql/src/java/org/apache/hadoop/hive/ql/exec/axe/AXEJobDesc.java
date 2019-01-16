@@ -66,7 +66,7 @@ class AXEJobDesc {
     if (children.size() == 1) {
       Operator<? extends OperatorDesc> operator = children.get(0);
       if (operator instanceof FilterOperator) {
-        tsOp.addFilterDesc(new AXEExpression(((FilterOperator) operator).getConf().getPredicate(), inputColIndex));
+        tsOp.addFilterDesc(new AXEExpression(((FilterOperator) operator).getConf().getPredicate()));
       } else if (operator instanceof SelectOperator) {
         addSelect(tsOp, (SelectOperator) operator);
         int projectSize = tsOp.projectCols.size();
@@ -177,6 +177,7 @@ class AXEJobDesc {
   private AXEGroupByOperator addGroupByOperator(final GroupByOperator groupByOperator) {
     AXEGroupByOperator gbOp = new AXEGroupByOperator(addTask(groupByOperator.getName()));
     GroupByDesc groupByDesc = groupByOperator.getConf();
+    gbOp.outputColumnNames = groupByOperator.getConf().getOutputColumnNames();
     gbOp.setAggregatorKeys(groupByDesc.getKeys());
     gbOp.setAggregators(groupByDesc.getAggregators());
     gbOp.setMode(groupByDesc.getMode().name());
