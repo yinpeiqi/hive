@@ -107,6 +107,7 @@ class AXEJobDesc {
   // TODO(tatiana): handle vectorization
   private void addSelect(final AXESelectOperator op, final SelectOperator operator) {
     op.setProjectCols(operator.getConf().getColList());
+    op.outputColumnNames = operator.getConf().getOutputColumnNames();
   }
 
   AXEOperator addReduceTask(final String taskName, final Operator<?> reducer) {

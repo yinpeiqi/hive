@@ -7,6 +7,7 @@ import java.util.List;
 
 class AXESelectOperator extends AXEOperator {
   List<AXEExpression> projectCols;
+  List<String> outputColumnNames;
 
   AXESelectOperator(int id) {
     super(id);
