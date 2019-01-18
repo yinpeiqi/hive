@@ -94,6 +94,8 @@ class AXEJobDesc {
     rsOp.setReduceKey(operator.getConf().getKeyCols(), inputColIndex);
     rsOp.setReduceValue(operator.getConf().getValueCols(), inputColIndex);
     rsOp.setSortOrder(operator.getConf().getOrder());
+    rsOp.setHasOrderBy(operator.getConf().hasOrderBy());
+    rsOp.setTopN(operator.getConf().getTopN());
     if (!operator.getConf().getPartitionCols().equals(operator.getConf().getKeyCols())) {
       rsOp.setPartitionKey(operator.getConf().getPartitionCols(), inputColIndex);
     }
