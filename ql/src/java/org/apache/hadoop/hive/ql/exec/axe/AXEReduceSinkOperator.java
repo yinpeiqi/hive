@@ -16,6 +16,8 @@ public class AXEReduceSinkOperator extends AXEOperator {
   List<String> reduceKeyColumnNames;
   List<String> reduceValueColumnNames;
   String reduceOutputName;
+  boolean hasOrderBy;
+  int topN = -1;
 
   AXEReduceSinkOperator(int id) {
     super(id);
@@ -56,5 +58,12 @@ public class AXEReduceSinkOperator extends AXEOperator {
 
   public void setSortOrder(final String order) {
     this.reduceSortOrder = order;
+  }
+
+  public void setHasOrderBy(final Boolean hasOrderBy) {
+    this.hasOrderBy = hasOrderBy;
+  }
+  public void setTopN(int topN) {
+    this.topN = topN;
   }
 }
