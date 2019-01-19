@@ -246,6 +246,7 @@ class AXEJobDesc {
 
   private AXETableScanOperator addTableScanOperator(TableScanOperator op, int tableId) {
     AXETableScanOperator tsOp = new AXETableScanOperator(addTask(op.getName()), op, tableId);
+    tsOp.outputColumnNames = op.getConf().getOutputColumnNames();
     output.tableScanOperators.add(tsOp);
     return tsOp;
   }
