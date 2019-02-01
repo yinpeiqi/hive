@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class AXETask extends Task<AXEWork> {
+  static AXEJobDesc jobDesc = new AXEJobDesc();
   protected final Logger LOG = LoggerFactory.getLogger(AXETask.class);
   private Gson gson = new GsonBuilder().disableHtmlEscaping().create();
   private String jsonPath;
@@ -59,14 +60,13 @@ public class AXETask extends Task<AXEWork> {
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
   private void generateJobSpecJson() {
-    AXEJobDesc jobDesc = new AXEJobDesc();
-
     Map<BaseWork, AXEOperator> workAXEOperatorMap = new HashMap<>();
     // Specify tasks
     for (BaseWork task : work.getAllWork()) {
       String taskName = task.getName();
       if (task instanceof MapWork) {
         MapWork mapWork = (MapWork) task;
+        jobDesc.currentStageName = mapWork.getName();
         if (mapWork.getAliasToWork().size() != 1) {
           LOG.warn("MapWork not a chain, with " + mapWork.getAliasToWork().size() + " children!");
         }
@@ -79,6 +79,7 @@ public class AXETask extends Task<AXEWork> {
         }
       } else if (task instanceof ReduceWork) {
         ReduceWork reduceWork = (ReduceWork) task;
+        jobDesc.currentStageName = reduceWork.getName();
         workAXEOperatorMap.put(reduceWork, jobDesc.addReduceTask(taskName, reduceWork.getReducer()));
       } else {
         throw new IllegalStateException("AssertionError: expected either MapWork or ReduceWork, "

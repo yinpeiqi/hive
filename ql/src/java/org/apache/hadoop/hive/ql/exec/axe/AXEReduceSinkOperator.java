@@ -18,6 +18,7 @@ public class AXEReduceSinkOperator extends AXEOperator {
   String reduceOutputName;
   boolean hasOrderBy;
   int topN = -1;
+  int numReducers = -1;
 
   AXEReduceSinkOperator(int id) {
     super(id);

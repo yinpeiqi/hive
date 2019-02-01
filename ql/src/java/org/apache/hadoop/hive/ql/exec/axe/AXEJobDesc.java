@@ -5,6 +5,7 @@ import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
 import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.LimitOperator;
+import org.apache.hadoop.hive.ql.exec.MapJoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
@@ -34,6 +35,7 @@ class AXEJobDesc {
   private final Map<String, Integer> taskNameToId;
   private final Map<String, Integer> tableNameToId;
   private int counter;
+  String currentStageName;
 
   AXEJobDesc() {
     output = new Output();
@@ -91,6 +93,7 @@ class AXEJobDesc {
     rsOp.reduceKeyColumnNames = operator.getConf().getOutputKeyColumnNames();
     rsOp.reduceValueColumnNames = operator.getConf().getOutputValueColumnNames(); // e.g. [_col0, _col1]
     // TODO(tatiana): do not understand what this is: int[] valueIdx = operator.getValueIndex();
+    rsOp.numReducers = operator.getConf().getNumReducers();
     rsOp.setReduceKey(operator.getConf().getKeyCols(), inputColIndex);
     rsOp.setReduceValue(operator.getConf().getValueCols(), inputColIndex);
     rsOp.setSortOrder(operator.getConf().getOrder());
@@ -152,11 +155,30 @@ class AXEJobDesc {
       op = addJoinOperator((JoinOperator) operator);
     } else if (operator instanceof FilterOperator) {
       op = addFilterOperator((FilterOperator) operator);
+    } else if (operator instanceof AXEHashTableSinkOperator) {
+      op = addHashTableSinkOperator((AXEHashTableSinkOperator) operator);
+    } else if (operator instanceof MapJoinOperator) {
+      op = addMapJoinOperator((MapJoinOperator) operator);
     } else {
       throw new IllegalStateException(
           "[AXEJobDesc.addOperator] Unsupported child operator " + operator.getClass().getName());
     }
     return op;
+  }
+
+  private AXEOperator addMapJoinOperator(final MapJoinOperator operator) {
+    AXEMapJoinOperator mjOp = new AXEMapJoinOperator(addTask(operator.getName()));
+    mjOp.initialize(operator.getConf());
+    output.mapJoinOperators.add(mjOp);
+    return mjOp;
+  }
+
+  private AXEOperator addHashTableSinkOperator(final AXEHashTableSinkOperator operator) {
+    AXEHTSOperator htsOp = new AXEHTSOperator(addTask(operator.getName()));
+    htsOp.initialize(operator.getConf());
+    htsOp.stageName = currentStageName;
+    output.hashTableSinkOperators.add(htsOp);
+    return htsOp;
   }
 
   private AXEOperator addFilterOperator(final FilterOperator operator) {
@@ -265,6 +287,8 @@ class AXEJobDesc {
     List<AXEGroupByOperator> groupByOperators;
     List<AXEJoinOperator> joinOperators;
     List<AXEFilterOperator> filterOperators;
+    List<AXEHTSOperator> hashTableSinkOperators;
+    List<AXEMapJoinOperator> mapJoinOperators;
 
     Output() {
       srcTables = new ArrayList<>();
@@ -276,6 +300,8 @@ class AXEJobDesc {
       joinOperators = new ArrayList<>();
       reduceSinkOperators = new ArrayList<>();
       filterOperators = new ArrayList<>();
+      hashTableSinkOperators = new ArrayList<>();
+      mapJoinOperators = new ArrayList<>();
     }
   }
 
