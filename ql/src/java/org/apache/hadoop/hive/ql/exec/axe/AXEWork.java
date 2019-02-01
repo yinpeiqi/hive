@@ -10,6 +10,7 @@ import org.apache.hadoop.hive.ql.plan.SparkEdgeProperty;
 import com.google.common.base.Preconditions;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,8 +31,11 @@ public class AXEWork extends AbstractOperatorDesc {
   private final Set<BaseWork> leaves = new LinkedHashSet<>();
   private final Map<Pair<BaseWork, BaseWork>, SparkEdgeProperty> edgeProperties = new HashMap<>();
 
+  private Map<BaseWork, BaseWork> cloneToWork;
+
   public AXEWork(final String name) {
     this.name = name + ":" + (++counter);
+    cloneToWork = new HashMap<>();
   }
 
   @Explain(displayName = "DagName")
@@ -39,8 +43,24 @@ public class AXEWork extends AbstractOperatorDesc {
     return name;
   }
 
+  public void disconnect(BaseWork a, BaseWork b) {
+    workGraph.get(a).remove(b);
+    invertedWorkGraph.get(b).remove(a);
+    if (getParents(b).isEmpty()) {
+      roots.add(b);
+    }
+    if (getChildren(a).isEmpty()) {
+      leaves.add(a);
+    }
+    edgeProperties.remove(new ImmutablePair<BaseWork, BaseWork>(a, b));
+  }
+
   public Set<BaseWork> getRoots() {
     return new LinkedHashSet<>(roots);
+  }
+
+  public Set<BaseWork> getLeaves() {
+    return new LinkedHashSet<>(leaves);
   }
 
   /**
@@ -56,6 +76,41 @@ public class AXEWork extends AbstractOperatorDesc {
     leaves.add(w);
   }
 
+  public boolean contains(BaseWork w) {
+    return workGraph.containsKey(w);
+  }
+
+  public void remove(BaseWork work) {
+    if (!workGraph.containsKey(work)) {
+      return;
+    }
+
+    List<BaseWork> children = getChildren(work);
+    List<BaseWork> parents = getParents(work);
+
+    for (BaseWork w : children) {
+      edgeProperties.remove(new ImmutablePair<>(work, w));
+      invertedWorkGraph.get(w).remove(work);
+      if (invertedWorkGraph.get(w).size() == 0) {
+        roots.add(w);
+      }
+    }
+
+    for (BaseWork w : parents) {
+      edgeProperties.remove(new ImmutablePair<>(w, work));
+      workGraph.get(w).remove(work);
+      if (workGraph.get(w).size() == 0) {
+        leaves.add(w);
+      }
+    }
+
+    roots.remove(work);
+    leaves.remove(work);
+
+    workGraph.remove(work);
+    invertedWorkGraph.remove(work);
+  }
+
   public void connect(BaseWork a, BaseWork b, SparkEdgeProperty edgeProp) {
     workGraph.get(a).add(b);
     invertedWorkGraph.get(b).add(a);
@@ -67,6 +122,14 @@ public class AXEWork extends AbstractOperatorDesc {
 
   public SparkEdgeProperty getEdgeProperty(BaseWork a, BaseWork b) {
     return edgeProperties.get(new ImmutablePair<>(a, b));
+  }
+
+  public Map<BaseWork, BaseWork> getCloneToWork() {
+    return cloneToWork;
+  }
+
+  public void setCloneToWork(Map<BaseWork, BaseWork> cloneToWork) {
+    this.cloneToWork = cloneToWork;
   }
 
   /**
@@ -114,6 +177,10 @@ public class AXEWork extends AbstractOperatorDesc {
       visit(leaf, seen, result);
     }
     return result;
+  }
+
+  public Collection<BaseWork> getAllWorkUnsorted() {
+    return workGraph.keySet();
   }
 
   private void visit(BaseWork child, Set<BaseWork> seen, List<BaseWork> result) {

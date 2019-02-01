@@ -26,6 +26,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
+import org.apache.hadoop.hive.ql.exec.axe.AXEHashTableSinkOperator;
 import org.apache.hadoop.hive.ql.exec.vector.VectorAppMasterEventOperator;
 import org.apache.hadoop.hive.ql.exec.vector.VectorFileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.vector.VectorFilterOperator;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hive.ql.plan.TableScanDesc;
 import org.apache.hadoop.hive.ql.plan.UDTFDesc;
 import org.apache.hadoop.hive.ql.plan.UnionDesc;
 import org.apache.hadoop.hive.ql.plan.VectorDesc;
+import org.apache.hadoop.hive.ql.plan.axe.AXEHashTableSinkDesc;
 
 import com.google.common.base.Preconditions;
 
@@ -114,6 +116,7 @@ public final class OperatorFactory {
     opvec.put(HashTableDummyDesc.class, HashTableDummyOperator.class);
     opvec.put(HashTableSinkDesc.class, HashTableSinkOperator.class);
     opvec.put(SparkHashTableSinkDesc.class, SparkHashTableSinkOperator.class);
+    opvec.put(AXEHashTableSinkDesc.class, AXEHashTableSinkOperator.class);
     opvec.put(DummyStoreDesc.class, DummyStoreOperator.class);
     opvec.put(DemuxDesc.class, DemuxOperator.class);
     opvec.put(MuxDesc.class, MuxOperator.class);

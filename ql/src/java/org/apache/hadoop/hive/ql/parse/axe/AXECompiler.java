@@ -8,6 +8,7 @@ import org.apache.hadoop.hive.ql.exec.DummyStoreOperator;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.HashTableDummyOperator;
+import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.MapJoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
@@ -21,22 +22,42 @@ import org.apache.hadoop.hive.ql.exec.axe.AXEWork;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
 import org.apache.hadoop.hive.ql.lib.CompositeProcessor;
+import org.apache.hadoop.hive.ql.lib.DefaultGraphWalker;
 import org.apache.hadoop.hive.ql.lib.DefaultRuleDispatcher;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
 import org.apache.hadoop.hive.ql.lib.GraphWalker;
 import org.apache.hadoop.hive.ql.lib.Node;
 import org.apache.hadoop.hive.ql.lib.NodeProcessor;
 import org.apache.hadoop.hive.ql.lib.NodeProcessorCtx;
+import org.apache.hadoop.hive.ql.lib.PreOrderWalker;
 import org.apache.hadoop.hive.ql.lib.Rule;
 import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.lib.TypeRule;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.optimizer.GenMapRedUtils;
+import org.apache.hadoop.hive.ql.optimizer.SetReducerParallelism;
+import org.apache.hadoop.hive.ql.optimizer.SparkRemoveDynamicPruningBySize;
 import org.apache.hadoop.hive.ql.optimizer.axe.AXEReduceSinkMapJoinProc;
+import org.apache.hadoop.hive.ql.optimizer.axe.CombineEquivalentWorkResolver;
+import org.apache.hadoop.hive.ql.optimizer.axe.SetAXEReducerParallelism;
+import org.apache.hadoop.hive.ql.optimizer.metainfo.annotation.AnnotateWithOpTraits;
+import org.apache.hadoop.hive.ql.optimizer.physical.AXEMapJoinResolver;
+import org.apache.hadoop.hive.ql.optimizer.physical.AnnotateRunTimeStatsOptimizer;
+import org.apache.hadoop.hive.ql.optimizer.physical.MetadataOnlyOptimizer;
+import org.apache.hadoop.hive.ql.optimizer.physical.NullScanOptimizer;
+import org.apache.hadoop.hive.ql.optimizer.physical.PhysicalContext;
+import org.apache.hadoop.hive.ql.optimizer.physical.StageIDsRearranger;
+import org.apache.hadoop.hive.ql.optimizer.physical.Vectorizer;
+import org.apache.hadoop.hive.ql.optimizer.spark.SparkJoinHintOptimizer;
+import org.apache.hadoop.hive.ql.optimizer.spark.SparkJoinOptimizer;
+import org.apache.hadoop.hive.ql.optimizer.spark.SplitAXEWorkResolver;
+import org.apache.hadoop.hive.ql.optimizer.stats.annotation.AnnotateWithStatistics;
 import org.apache.hadoop.hive.ql.parse.GlobalLimitCtx;
 import org.apache.hadoop.hive.ql.parse.ParseContext;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.TaskCompiler;
+import org.apache.hadoop.hive.ql.parse.spark.OptimizeSparkProcContext;
+import org.apache.hadoop.hive.ql.parse.spark.SparkPartitionPruningSinkOperator;
 import org.apache.hadoop.hive.ql.plan.BaseWork;
 import org.apache.hadoop.hive.ql.plan.BucketMapJoinContext;
 import org.apache.hadoop.hive.ql.plan.MapWork;
@@ -129,6 +150,80 @@ public class AXECompiler extends TaskCompiler {
     return null;
   }
 
+  private void runStatsAnnotation(OptimizeSparkProcContext procCtx) throws SemanticException {
+    new AnnotateWithStatistics().transform(procCtx.getParseContext());
+    new AnnotateWithOpTraits().transform(procCtx.getParseContext());
+  }
+
+  protected void optimizeOperatorPlan(ParseContext pCtx, Set<ReadEntity> inputs,
+      Set<WriteEntity> outputs) throws SemanticException {
+    PERF_LOGGER.PerfLogBegin(CLASS_NAME, PerfLogger.AXE_OPTIMIZE_OPERATOR_TREE);
+
+    OptimizeSparkProcContext procCtx = new OptimizeSparkProcContext(conf, pCtx, inputs, outputs);
+
+    /* TODO(tatiana): partition pruning
+    runDynamicPartitionPruning(procCtx);
+    */
+
+    // Annotate OP tree with stats
+    runStatsAnnotation(procCtx);
+
+    // Set reducer parallelism
+    runSetReducerParallelism(procCtx);
+
+    // Run Join releated optimizations
+    runJoinOptimizations(procCtx);
+
+    /* TODO(tatiana)
+    // Remove cyclic dependencies for DPP
+    runCycleAnalysisForPartitionPruning(procCtx);
+    */
+
+    PERF_LOGGER.PerfLogEnd(CLASS_NAME, PerfLogger.AXE_OPTIMIZE_OPERATOR_TREE);
+  }
+
+  private void runSetReducerParallelism(OptimizeSparkProcContext procCtx) throws SemanticException {
+    ParseContext pCtx = procCtx.getParseContext();
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<>();
+    opRules.put(new RuleRegExp("Set parallelism - ReduceSink",
+                               ReduceSinkOperator.getOperatorName() + "%"),
+                new SetAXEReducerParallelism(pCtx.getConf()));
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(null, opRules, procCtx);
+    GraphWalker ogw = new PreOrderWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<>();
+    topNodes.addAll(pCtx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+  }
+
+  private void runJoinOptimizations(OptimizeSparkProcContext procCtx) throws SemanticException {
+    ParseContext pCtx = procCtx.getParseContext();
+    Map<Rule, NodeProcessor> opRules = new LinkedHashMap<>();
+
+    opRules.put(new TypeRule(JoinOperator.class), new SparkJoinOptimizer(pCtx));
+
+    opRules.put(new TypeRule(MapJoinOperator.class), new SparkJoinHintOptimizer(pCtx));
+
+    opRules.put(new RuleRegExp("Disabling Dynamic Partition Pruning By Size",
+                               SparkPartitionPruningSinkOperator.getOperatorName() + "%"),
+                new SparkRemoveDynamicPruningBySize());
+
+    // The dispatcher fires the processor corresponding to the closest matching
+    // rule and passes the context along
+    Dispatcher disp = new DefaultRuleDispatcher(null, opRules, procCtx);
+    GraphWalker ogw = new DefaultGraphWalker(disp);
+
+    // Create a list of topop nodes
+    ArrayList<Node> topNodes = new ArrayList<Node>();
+    topNodes.addAll(pCtx.getTopOps().values());
+    ogw.startWalking(topNodes, null);
+  }
+
+
   @Override
   public void compile(final ParseContext pCtx, final List<Task<? extends Serializable>> rootTasks,
       final HashSet<ReadEntity> inputs, final HashSet<WriteEntity> outputs) throws SemanticException {
@@ -143,9 +238,64 @@ public class AXECompiler extends TaskCompiler {
 
   @Override
   protected void optimizeTaskPlan(List<Task<? extends Serializable>> rootTasks,
-      ParseContext pCtx, Context ctx) {
-    // Currently we do not optimize the task plan
-    // Consider parallelism setting & running stats annotation
+      ParseContext pCtx, Context ctx) throws SemanticException {
+    PERF_LOGGER.PerfLogBegin(CLASS_NAME, PerfLogger.SPARK_OPTIMIZE_TASK_TREE);
+    PhysicalContext physicalCtx = new PhysicalContext(conf, pCtx, pCtx.getContext(), rootTasks,
+                                                      pCtx.getFetchTask());
+
+    physicalCtx = new SplitAXEWorkResolver().resolve(physicalCtx);
+
+    /* TODO(tatiana)
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVESKEWJOIN)) {
+      (new SparkSkewJoinResolver()).resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping runtime skew join optimization");
+    }
+    */
+
+    physicalCtx = new AXEMapJoinResolver().resolve(physicalCtx);
+
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVENULLSCANOPTIMIZE)) {
+      physicalCtx = new NullScanOptimizer().resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping null scan query optimization");
+    }
+
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVEMETADATAONLYQUERIES)) {
+      physicalCtx = new MetadataOnlyOptimizer().resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping metadata only query optimization");
+    }
+
+    /* TODO(tatiana)
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVE_CHECK_CROSS_PRODUCT)) {
+      physicalCtx = new SparkCrossProductCheck().resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping cross product analysis");
+    }
+    */
+
+    if (conf.getBoolVar(HiveConf.ConfVars.HIVE_VECTORIZATION_ENABLED)
+        && ctx.getExplainAnalyze() == null) {
+      (new Vectorizer()).resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping vectorization");
+    }
+
+    if (!"none".equalsIgnoreCase(conf.getVar(HiveConf.ConfVars.HIVESTAGEIDREARRANGE))) {
+      (new StageIDsRearranger()).resolve(physicalCtx);
+    } else {
+      LOG.debug("Skipping stage id rearranger");
+    }
+
+    new CombineEquivalentWorkResolver().resolve(physicalCtx);
+
+    if (physicalCtx.getContext().getExplainAnalyze() != null) {
+      new AnnotateRunTimeStatsOptimizer().resolve(physicalCtx);
+    }
+
+    PERF_LOGGER.PerfLogEnd(CLASS_NAME, PerfLogger.SPARK_OPTIMIZE_TASK_TREE);
+    return;
   }
 
   @Override

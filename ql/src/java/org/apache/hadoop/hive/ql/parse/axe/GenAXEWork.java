@@ -45,7 +45,7 @@ import static org.apache.hadoop.hive.ql.parse.spark.GenSparkUtils.getEdgePropert
  */
 public class GenAXEWork implements NodeProcessor {
   static final private Logger LOG = LoggerFactory.getLogger(GenAXEWork.class.getName());
-  static private int sequenceNumber = 0;
+  static public int sequenceNumber = 0;
 
   public MapWork createMapWork(GenAXEProcContext context, Operator<?> root,
       AXEWork sparkWork, PrunedPartitionList partitions, boolean deferSetup) throws SemanticException {
