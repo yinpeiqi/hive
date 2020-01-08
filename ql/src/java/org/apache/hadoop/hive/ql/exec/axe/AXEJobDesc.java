@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.ql.exec.axe;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.FilterOperator;
 import org.apache.hadoop.hive.ql.exec.GroupByOperator;
@@ -7,6 +8,7 @@ import org.apache.hadoop.hive.ql.exec.JoinOperator;
 import org.apache.hadoop.hive.ql.exec.LimitOperator;
 import org.apache.hadoop.hive.ql.exec.MapJoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.PTFOperator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
@@ -17,6 +19,7 @@ import org.apache.hadoop.hive.ql.plan.FileSinkDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.LimitDesc;
 import org.apache.hadoop.hive.ql.plan.OperatorDesc;
+import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 import com.google.common.base.Preconditions;
 
@@ -25,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,8 +38,8 @@ class AXEJobDesc {
   protected final Logger LOG = LoggerFactory.getLogger(AXETask.class);
   private final Map<String, Integer> taskNameToId;
   private final Map<String, Integer> tableNameToId;
-  private int counter;
   String currentStageName;
+  private int counter;
 
   AXEJobDesc() {
     output = new Output();
@@ -44,10 +48,14 @@ class AXEJobDesc {
     counter = 0;
   }
 
-  AXEOperator addMapTask(String taskName, TableScanOperator ts) {
+  AXEOperator addMapTask(String taskName, Map.Entry<String, Operator<? extends OperatorDesc>> aliasOp,
+      final List<Path> aliasPaths,
+      final LinkedHashMap<String, PartitionDesc> aliasToPartnInfo) {
     // TODO(tatiana): check for bucket pruning
+    TableScanOperator ts = (TableScanOperator) aliasOp.getValue();
     Map<String, Integer> inputColIndex = new HashMap<>();
-    int tableId = addSrcTable(ts.getConf().getTableMetadata(), inputColIndex);
+    PartitionDesc pd = aliasToPartnInfo.get(aliasOp.getKey());
+    int tableId = addSrcTable(ts, inputColIndex, aliasPaths, aliasOp.getKey(), pd);
     AXETableScanOperator tsOp = addTableScanOperator(ts, tableId);
     List<Operator<? extends OperatorDesc>> next = tryPushChildrenIntoTableScan(tsOp, ts.getChildOperators(),
                                                                                inputColIndex);
@@ -159,11 +167,20 @@ class AXEJobDesc {
       op = addHashTableSinkOperator((AXEHashTableSinkOperator) operator);
     } else if (operator instanceof MapJoinOperator) {
       op = addMapJoinOperator((MapJoinOperator) operator);
+    } else if (operator instanceof PTFOperator) {
+      op = addPTFOperator((PTFOperator) operator);
     } else {
       throw new IllegalStateException(
           "[AXEJobDesc.addOperator] Unsupported child operator " + operator.getClass().getName());
     }
     return op;
+  }
+
+  private AXEOperator addPTFOperator(final PTFOperator operator) {
+    AXEPTFOperator ptfOp = new AXEPTFOperator(addTask(operator.getName()));
+    ptfOp.initialize(operator.getConf());
+    output.ptfOperators.add(ptfOp);
+    return ptfOp;
   }
 
   private AXEOperator addMapJoinOperator(final MapJoinOperator operator) {
@@ -227,27 +244,32 @@ class AXEJobDesc {
     return fsOp;
   }
 
-  private int addSrcTable(Table table, Map<String, Integer> inputColIndex) {
-    // Construct AXETable
-    AXETable axeTable = new AXETable(table.getTableName());
-    axeTable.hdfsUrl = Objects.requireNonNull(table.getPath()).toString();
-    if (table.getInputFormatClass() == OrcInputFormat.class && table.getOutputFormatClass() == OrcOutputFormat.class) {
+  private int addSrcTable(TableScanOperator ts, Map<String, Integer> inputColIndex,
+      final List<Path> aliasPaths, final String alias, final PartitionDesc pd) {
+    AXETable axeTable = new AXETable(alias);
+    if (aliasPaths.size() == 0) {
+      LOG.warn("No partition given for table " + alias + ". Using the whole table now.");
+      Table table = ts.getConf().getTableMetadata();
+      Preconditions.checkArgument(table != null, "No partition given for table, and null table metadata");
+      axeTable.addPath(Objects.requireNonNull(table.getPath()));
+    } else {
+      axeTable.addPaths(aliasPaths);
+    }
+    int nColumns = ts.getNeededColumnIDs().size();
+    for (int i = 0; i < nColumns; ++i) {
+      inputColIndex.put(ts.getNeededColumns().get(i), ts.getNeededColumnIDs().get(i));
+    }
+    if (pd.getInputFileFormatClass() == OrcInputFormat.class
+        && pd.getOutputFileFormatClass() == OrcOutputFormat.class) {
       axeTable.inputFormat = "ORC";
     } else {
       throw new IllegalArgumentException(
-          "The inputFormat of table is expected to be ORC, but was " + table.getInputFormatClass());
-    }
-    axeTable.setSchema(table.getAllCols());
-
-    // Update column map
-    int i = 0;
-    for (AXETable.Field col : axeTable.schema) {
-      inputColIndex.put(col.name, i++);
+          "The inputFormat of table is expected to be ORC, but was " + pd.getInputFileFormatClass());
     }
 
     // Add to Json output
     int tableId = output.srcTables.size();
-    tableNameToId.put(table.getTableName(), tableId);
+    tableNameToId.put(alias, tableId);
     output.srcTables.add(axeTable);
     return tableId;
   }
@@ -268,7 +290,9 @@ class AXEJobDesc {
 
   private AXETableScanOperator addTableScanOperator(TableScanOperator op, int tableId) {
     AXETableScanOperator tsOp = new AXETableScanOperator(addTask(op.getName()), op, tableId);
-    tsOp.outputColumnNames = op.getConf().getOutputColumnNames();
+    if (op.getConf() != null) {
+      tsOp.outputColumnNames = op.getConf().getOutputColumnNames();
+    }
     output.tableScanOperators.add(tsOp);
     return tsOp;
   }
@@ -277,32 +301,21 @@ class AXEJobDesc {
     return taskNameToId.get(name);
   }
 
-  public class Output {
-    List<AXEFileSinkOperator> fileSinkOperators;
-    List<AXEReduceSinkOperator> reduceSinkOperators;
-    List<AXETable> srcTables;
-    List<AXETableScanOperator> tableScanOperators;
-    List<AXESelectOperator> selectOperators;
-    List<AXELimitOperator> limitOperators;
-    List<AXEGroupByOperator> groupByOperators;
-    List<AXEJoinOperator> joinOperators;
-    List<AXEFilterOperator> filterOperators;
-    List<AXEHTSOperator> hashTableSinkOperators;
-    List<AXEMapJoinOperator> mapJoinOperators;
+  static class Output {
+    final List<AXEPTFOperator> ptfOperators = new ArrayList<>();
+    final List<AXEFileSinkOperator> fileSinkOperators = new ArrayList<>();
+    final List<AXEReduceSinkOperator> reduceSinkOperators = new ArrayList<>();
+    final List<AXETable> srcTables = new ArrayList<>();
+    final List<AXETableScanOperator> tableScanOperators = new ArrayList<>();
+    final List<AXESelectOperator> selectOperators = new ArrayList<>();
+    final List<AXELimitOperator> limitOperators = new ArrayList<>();
+    final List<AXEGroupByOperator> groupByOperators = new ArrayList<>();
+    final List<AXEJoinOperator> joinOperators = new ArrayList<>();
+    final List<AXEFilterOperator> filterOperators = new ArrayList<>();
+    final List<AXEHTSOperator> hashTableSinkOperators = new ArrayList<>();
+    final List<AXEMapJoinOperator> mapJoinOperators = new ArrayList<>();
 
-    Output() {
-      srcTables = new ArrayList<>();
-      tableScanOperators = new ArrayList<>();
-      selectOperators = new ArrayList<>();
-      limitOperators = new ArrayList<>();
-      fileSinkOperators = new ArrayList<>();
-      groupByOperators = new ArrayList<>();
-      joinOperators = new ArrayList<>();
-      reduceSinkOperators = new ArrayList<>();
-      filterOperators = new ArrayList<>();
-      hashTableSinkOperators = new ArrayList<>();
-      mapJoinOperators = new ArrayList<>();
-    }
+    Output() {}
   }
 
 }
