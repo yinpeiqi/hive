@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.ql.exec.axe;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.metrics.common.Metrics;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.DriverContext;
@@ -24,6 +25,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -70,11 +72,14 @@ public class AXETask extends Task<AXEWork> {
         if (mapWork.getAliasToWork().size() != 1) {
           LOG.warn("MapWork not a chain, with " + mapWork.getAliasToWork().size() + " children!");
         }
+        Preconditions.checkArgument(mapWork.getAliasToWork().size() == 1,
+                                    "Now assuming only one table for each work. Need to check for paths if not");
+        List<Path> aliasPaths = new ArrayList<>(mapWork.getPathToAliases().keySet());
         for (Map.Entry<String, Operator<? extends OperatorDesc>> ops : mapWork.getAliasToWork().entrySet()) {
           Preconditions.checkArgument(ops.getValue() instanceof TableScanOperator,
                                       "The root of MapWork is expected to be a TableScanOperator, but was "
                                           + ops.getValue().getClass().getName());
-          AXEOperator operator = jobDesc.addMapTask(taskName, (TableScanOperator) ops.getValue());
+          AXEOperator operator = jobDesc.addMapTask(taskName, ops, aliasPaths, mapWork.getAliasToPartnInfo());
           workAXEOperatorMap.put(mapWork, operator);
         }
       } else if (task instanceof ReduceWork) {

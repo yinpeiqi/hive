@@ -44,7 +44,7 @@ class AXEGroupByOperator extends AXEOperator {
   }
 
   @SuppressWarnings("unused")
-  class Aggregator {
+  static class Aggregator {
     private final boolean distinct;
     private final List<AXEExpression> parameters;
     private final String func;
