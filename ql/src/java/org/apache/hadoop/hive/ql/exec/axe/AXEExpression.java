@@ -5,6 +5,7 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFBridge;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPAnd;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPOr;
 
@@ -12,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 class AXEExpression {
 
@@ -43,8 +43,10 @@ class AXEExpression {
       return "And";
     } else if (funcDesc.getGenericUDF() instanceof GenericUDFOPOr) {
       return "Or";
+    } else if (funcDesc.getGenericUDF() instanceof GenericUDFBridge) {
+      return ((GenericUDFBridge)funcDesc.getGenericUDF()).getUdfName();
     }
-    return funcDesc.getGenericUDF().getUdfName();
+    return funcDesc.getGenericUDF().getClass().getSimpleName().substring(10).toLowerCase();
   }
 
   private int processExpr(int nodeId, ExprNodeDesc exprNodeDesc, Deque<ObjectPair<ExprNodeDesc, Integer>> queue,
@@ -70,7 +72,9 @@ class AXEExpression {
       ExprNodeConstantDesc constantDesc = (ExprNodeConstantDesc) exprNodeDesc;
       node.type = constantDesc.getTypeString();
       if (constantDesc.getTypeString().equals("string")) {
-        node.value = constantDesc.getValue().toString();
+        if (constantDesc.getValue() != null) {
+          node.value = constantDesc.getValue().toString();
+        }
       } else {
         node.value = constantDesc.getExprString();
       }
