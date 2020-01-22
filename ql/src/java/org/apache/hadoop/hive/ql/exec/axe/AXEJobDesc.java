@@ -247,13 +247,17 @@ class AXEJobDesc {
   private int addSrcTable(TableScanOperator ts, Map<String, Integer> inputColIndex,
       final List<Path> aliasPaths, final String alias, final PartitionDesc pd) {
     AXETable axeTable = new AXETable(alias);
+    Table table = ts.getConf().getTableMetadata();
     if (aliasPaths.size() == 0) {
       LOG.warn("No partition given for table " + alias + ". Using the whole table now.");
-      Table table = ts.getConf().getTableMetadata();
       Preconditions.checkArgument(table != null, "No partition given for table, and null table metadata");
       axeTable.addPath(Objects.requireNonNull(table.getPath()));
+      axeTable.setSchema(table.getAllCols());
     } else {
       axeTable.addPaths(aliasPaths);
+      if (table != null) {
+        axeTable.setSchema(table.getAllCols());
+      }
     }
     int nColumns = ts.getNeededColumnIDs().size();
     for (int i = 0; i < nColumns; ++i) {

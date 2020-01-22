@@ -20,7 +20,7 @@ import java.util.List;
 class AXEPTFOperator extends AXEOperator {
   private final List<Order> orderExprs = new ArrayList<>();
   private final List<AXEExpression> partitionExprs = new ArrayList<>();
-  private List<WindowFunction> windowFunctions;
+  private final List<WindowFunction> windowFunctions = new ArrayList<>();
   private List<String> outputColumnNames;
 
   AXEPTFOperator(final int id) {
@@ -69,8 +69,6 @@ class AXEPTFOperator extends AXEOperator {
   private void setWindowFunction(List<WindowFunctionDef> windowFunctionDefs) {
     // always complete mode
     for (WindowFunctionDef windowFunctionDef : windowFunctionDefs) {
-      GenericUDAFCount.GenericUDAFCountEvaluator fnEval = (GenericUDAFCount.GenericUDAFCountEvaluator) windowFunctionDef
-          .getWFnEval();
       windowFunctions.add(new WindowFunction(windowFunctionDef));
       Preconditions.checkArgument(windowFunctionDef.getWindowFrame().getWindowSize() == -1,
                                   "Does not support windowing yet");
