@@ -2,12 +2,15 @@ package org.apache.hadoop.hive.ql.exec.axe;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class AXETable {
   final List<String> hdfsUrl = new ArrayList<>();
+  final List<Map<String, String>> partitionCols = new ArrayList<>();
   String inputFormat;
   List<Field> schema;
   @SuppressWarnings("FieldCanBeLocal")
@@ -24,9 +27,10 @@ public class AXETable {
     }
   }
 
-  void addPaths(final List<Path> aliasPaths) {
-    for (Path path : aliasPaths) {
-      hdfsUrl.add(path.toUri().toString());
+  void addPaths(final Map<Path, PartitionDesc> pathPartitionDescMap) {
+    for (Map.Entry<Path, PartitionDesc> pathPartitionDescEntry : pathPartitionDescMap.entrySet()) {
+      hdfsUrl.add(pathPartitionDescEntry.getKey().toUri().toString());
+      partitionCols.add(pathPartitionDescEntry.getValue().getPartSpec());
     }
   }
 
