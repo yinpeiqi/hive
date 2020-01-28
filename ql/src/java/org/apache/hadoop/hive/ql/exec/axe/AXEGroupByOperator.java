@@ -2,6 +2,7 @@ package org.apache.hadoop.hive.ql.exec.axe;
 
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,10 +10,11 @@ import java.util.List;
 @SuppressWarnings({"FieldCanBeLocal", "unused"})
 class AXEGroupByOperator extends AXEOperator {
 
+  List<String> outputColumnNames;
   private List<AXEExpression> aggregatorKeys;
   private List<Aggregator> aggregators;
   private String mode;
-  List<String> outputColumnNames;
+  private boolean bucketGroup;
 
   AXEGroupByOperator(int id) {
     super(id);
@@ -28,7 +30,7 @@ class AXEGroupByOperator extends AXEOperator {
       for (ExprNodeDesc parameter : parameters) {
         parameterDesc.add(new AXEExpression(parameter));
       }
-      this.aggregators.add(new Aggregator(funcName, parameterDesc, distinct));
+      this.aggregators.add(new Aggregator(funcName, parameterDesc, distinct, desc.getMode()));
     }
   }
 
@@ -43,16 +45,21 @@ class AXEGroupByOperator extends AXEOperator {
     this.mode = mode;
   }
 
+  void setBucketGroup(final boolean bucketGroup) { this.bucketGroup = bucketGroup; }
+
   @SuppressWarnings("unused")
   static class Aggregator {
     private final boolean distinct;
     private final List<AXEExpression> parameters;
     private final String func;
+    private int mode;
 
-    Aggregator(String func, List<AXEExpression> parameters, final boolean distinct) {
+    Aggregator(String func, List<AXEExpression> parameters, final boolean distinct,
+        final GenericUDAFEvaluator.Mode mode) {
       this.func = func;
       this.parameters = parameters;
       this.distinct = distinct;
+      this.mode = mode.ordinal();
     }
   }
 }

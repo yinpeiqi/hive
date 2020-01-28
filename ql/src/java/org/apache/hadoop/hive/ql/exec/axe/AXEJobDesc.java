@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,13 +48,11 @@ class AXEJobDesc {
   }
 
   AXEOperator addMapTask(String taskName, Map.Entry<String, Operator<? extends OperatorDesc>> aliasOp,
-      final List<Path> aliasPaths,
-      final LinkedHashMap<String, PartitionDesc> aliasToPartnInfo) {
+      final Map<Path, PartitionDesc> pathPartitionDescMap) {
     // TODO(tatiana): check for bucket pruning
     TableScanOperator ts = (TableScanOperator) aliasOp.getValue();
     Map<String, Integer> inputColIndex = new HashMap<>();
-    PartitionDesc pd = aliasToPartnInfo.get(aliasOp.getKey());
-    int tableId = addSrcTable(ts, inputColIndex, aliasPaths, aliasOp.getKey(), pd);
+    int tableId = addSrcTable(ts, inputColIndex, pathPartitionDescMap, aliasOp.getKey());
     AXETableScanOperator tsOp = addTableScanOperator(ts, tableId);
     List<Operator<? extends OperatorDesc>> next = tryPushChildrenIntoTableScan(tsOp, ts.getChildOperators(),
                                                                                inputColIndex);
@@ -223,6 +220,7 @@ class AXEJobDesc {
     gbOp.setAggregatorKeys(groupByDesc.getKeys());
     gbOp.setAggregators(groupByDesc.getAggregators());
     gbOp.setMode(groupByDesc.getMode().name());
+    gbOp.setBucketGroup(groupByDesc.getBucketGroup());
     output.groupByOperators.add(gbOp);
     return gbOp;
   }
@@ -245,30 +243,38 @@ class AXEJobDesc {
   }
 
   private int addSrcTable(TableScanOperator ts, Map<String, Integer> inputColIndex,
-      final List<Path> aliasPaths, final String alias, final PartitionDesc pd) {
+      final Map<Path, PartitionDesc> pathPartitionDescMap, final String alias) {
     AXETable axeTable = new AXETable(alias);
     Table table = ts.getConf().getTableMetadata();
-    if (aliasPaths.size() == 0) {
+    if (pathPartitionDescMap.size() == 0) {
       LOG.warn("No partition given for table " + alias + ". Using the whole table now.");
       Preconditions.checkArgument(table != null, "No partition given for table, and null table metadata");
       axeTable.addPath(Objects.requireNonNull(table.getPath()));
       axeTable.setSchema(table.getAllCols());
+      if (table.getInputFormatClass() == OrcInputFormat.class
+          && table.getOutputFormatClass() == OrcOutputFormat.class) {
+        axeTable.inputFormat = "ORC";
+      } else {
+        throw new IllegalArgumentException(
+            "The inputFormat of table is expected to be ORC, but was " + table.getInputFormatClass());
+      }
     } else {
-      axeTable.addPaths(aliasPaths);
+      axeTable.addPaths(pathPartitionDescMap);
       if (table != null) {
         axeTable.setSchema(table.getAllCols());
+      }
+      PartitionDesc pd = pathPartitionDescMap.entrySet().iterator().next().getValue();
+      if (pd.getInputFileFormatClass() == OrcInputFormat.class
+          && pd.getOutputFileFormatClass() == OrcOutputFormat.class) {
+        axeTable.inputFormat = "ORC";
+      } else {
+        throw new IllegalArgumentException(
+            "The inputFormat of table is expected to be ORC, but was " + pd.getInputFileFormatClass());
       }
     }
     int nColumns = ts.getNeededColumnIDs().size();
     for (int i = 0; i < nColumns; ++i) {
       inputColIndex.put(ts.getNeededColumns().get(i), ts.getNeededColumnIDs().get(i));
-    }
-    if (pd.getInputFileFormatClass() == OrcInputFormat.class
-        && pd.getOutputFileFormatClass() == OrcOutputFormat.class) {
-      axeTable.inputFormat = "ORC";
-    } else {
-      throw new IllegalArgumentException(
-          "The inputFormat of table is expected to be ORC, but was " + pd.getInputFileFormatClass());
     }
 
     // Add to Json output

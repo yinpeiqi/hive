@@ -10,6 +10,7 @@ import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.plan.BaseWork;
 import org.apache.hadoop.hive.ql.plan.MapWork;
 import org.apache.hadoop.hive.ql.plan.OperatorDesc;
+import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 import org.apache.hadoop.hive.ql.plan.ReduceWork;
 import org.apache.hadoop.hive.ql.plan.api.StageType;
 
@@ -74,12 +75,11 @@ public class AXETask extends Task<AXEWork> {
         }
         Preconditions.checkArgument(mapWork.getAliasToWork().size() == 1,
                                     "Now assuming only one table for each work. Need to check for paths if not");
-        List<Path> aliasPaths = new ArrayList<>(mapWork.getPathToAliases().keySet());
         for (Map.Entry<String, Operator<? extends OperatorDesc>> ops : mapWork.getAliasToWork().entrySet()) {
           Preconditions.checkArgument(ops.getValue() instanceof TableScanOperator,
                                       "The root of MapWork is expected to be a TableScanOperator, but was "
                                           + ops.getValue().getClass().getName());
-          AXEOperator operator = jobDesc.addMapTask(taskName, ops, aliasPaths, mapWork.getAliasToPartnInfo());
+          AXEOperator operator = jobDesc.addMapTask(taskName, ops, mapWork.getPathToPartitionInfo());
           workAXEOperatorMap.put(mapWork, operator);
         }
       } else if (task instanceof ReduceWork) {

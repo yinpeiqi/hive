@@ -8,12 +8,16 @@ import java.util.List;
 class AXETableScanOperator extends AXESelectOperator {
   private int tableId;
   private List<Integer> neededCols;
+  private List<String> referencedColumns;
   private AXEExpression filterDesc;
 
   AXETableScanOperator(int id, final TableScanOperator op, int tableId) {
     super(id);
     this.tableId = tableId;
     neededCols = op.getNeededColumnIDs();
+    if (op.getReferencedColumns() != null && neededCols.size() != op.getReferencedColumns().size()) {
+      referencedColumns = op.getReferencedColumns();
+    }
   }
 
   void addFilterDesc(final AXEExpression filterDesc) {
