@@ -15,6 +15,8 @@ import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.io.orc.OrcInputFormat;
 import org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.plan.AggregationDesc;
+import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.FileSinkDesc;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.LimitDesc;
@@ -23,6 +25,7 @@ import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 import com.google.common.base.Preconditions;
 
+import jline.internal.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -219,6 +222,28 @@ class AXEJobDesc {
     gbOp.outputColumnNames = groupByOperator.getConf().getOutputColumnNames();
     gbOp.setAggregatorKeys(groupByDesc.getKeys());
     gbOp.setAggregators(groupByDesc.getAggregators());
+    for (AggregationDesc aggregationDesc : groupByDesc.getAggregators()) {
+      if (aggregationDesc.getDistinct() && groupByDesc.getMode() == GroupByDesc.Mode.HASH) {
+        // the aggregator parameters should also appear in aggregator key for hash mode
+        boolean assumptionNotTrue = false;
+        for (ExprNodeDesc parameterDesc : aggregationDesc.getParameters()) {
+          boolean inKey = false;
+          for (ExprNodeDesc keyDesc : groupByDesc.getKeys()) {
+            if (keyDesc == parameterDesc) {
+              inKey = true;
+              break;
+            }
+          }
+          if (!inKey) {
+            assumptionNotTrue = true;
+            break;
+          }
+        }
+        if (assumptionNotTrue) {
+          Log.error("Distinct agg parameter not in agg key for hash mode" + aggregationDesc.getExprString());
+        }
+      }
+    }
     gbOp.setMode(groupByDesc.getMode().name());
     gbOp.setBucketGroup(groupByDesc.getBucketGroup());
     output.groupByOperators.add(gbOp);
