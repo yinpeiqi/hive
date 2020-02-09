@@ -10,6 +10,7 @@ import org.apache.hadoop.hive.ql.exec.MapJoinOperator;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.PTFOperator;
 import org.apache.hadoop.hive.ql.exec.ReduceSinkOperator;
+import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.exec.SelectOperator;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.io.orc.OrcInputFormat;
@@ -284,11 +285,15 @@ class AXEJobDesc {
             "The inputFormat of table is expected to be ORC, but was " + table.getInputFormatClass());
       }
     } else {
+      PartitionDesc pd = pathPartitionDescMap.entrySet().iterator().next().getValue();
       axeTable.addPaths(pathPartitionDescMap);
       if (table != null) {
         axeTable.setSchema(table.getAllCols());
+      } else {
+        RowSchema rowSchema = ts.getSchema();
+        Preconditions.checkArgument(rowSchema != null, "Table metadata and row schema are both null");
+        axeTable.setSchema(rowSchema);
       }
-      PartitionDesc pd = pathPartitionDescMap.entrySet().iterator().next().getValue();
       if (pd.getInputFileFormatClass() == OrcInputFormat.class
           && pd.getOutputFileFormatClass() == OrcOutputFormat.class) {
         axeTable.inputFormat = "ORC";
