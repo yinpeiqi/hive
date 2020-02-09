@@ -2,6 +2,8 @@ package org.apache.hadoop.hive.ql.exec.axe;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.ql.exec.ColumnInfo;
+import org.apache.hadoop.hive.ql.exec.RowSchema;
 import org.apache.hadoop.hive.ql.plan.PartitionDesc;
 
 import java.util.ArrayList;
@@ -36,6 +38,14 @@ public class AXETable {
 
   void addPath(final Path path) {
     hdfsUrl.add(path.toUri().toString());
+  }
+
+  public void setSchema(final RowSchema rowSchema) {
+    for (ColumnInfo columnInfo : rowSchema.getSignature()) {
+      if (!columnInfo.isHiddenVirtualCol()) {
+        schema.add(new Field(columnInfo.getAlias(), columnInfo.getTypeName()));
+      }
+    }
   }
 
   static class Field {
