@@ -23,6 +23,9 @@ class AXEJoinOperator extends AXEOperator {
   }
 
   void setJoinKeys(final ExprNodeDesc[][] joinKeys) {
+    if (joinKeys == null) {
+      return;
+    }
     for (int keyIdx = 0; keyIdx < joinKeys.length; ++keyIdx) {
       joinTableColumns.add(new ArrayList<JoinColumn>());
       for (int k = 0; k < joinKeys[keyIdx].length; ++k) {
