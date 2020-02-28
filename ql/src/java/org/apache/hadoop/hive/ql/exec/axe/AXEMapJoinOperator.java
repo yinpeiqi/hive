@@ -22,6 +22,7 @@ public class AXEMapJoinOperator extends AXEOperator {
   private Map<Integer, String> parentToInput;
   private List<String> outputColumnNames;
   Byte[] tagOrder;
+  private Map<Byte, List<AXEExpression>> filters;
 
 
   AXEMapJoinOperator(int id) {super(id);}
@@ -44,5 +45,7 @@ public class AXEMapJoinOperator extends AXEOperator {
     exprs = new HashMap<>();
     AXEHTSOperator.SetExprs(exprs, desc.getExprs());
     parentToInput = desc.getParentToInput();
+    filters = new HashMap<>();
+    AXEHTSOperator.SetExprs(filters, desc.getFilters());
   }
 }

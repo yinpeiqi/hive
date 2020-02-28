@@ -133,7 +133,9 @@ class AXEJobDesc {
   private void addNext(AXEOperator op, final List<Operator<? extends OperatorDesc>> childOperators,
       final Map<String, Integer> inputColIndex) {
     if (childOperators == null || childOperators.isEmpty()) {
-      if (!((op instanceof AXEReduceSinkOperator) || (op instanceof AXEFileSinkOperator))) {
+      if (!((op instanceof AXEReduceSinkOperator)
+          || (op instanceof AXEFileSinkOperator)
+          || (op instanceof AXEHTSOperator))) {
         LOG.warn("The tail of work is not RS or FS: " + op.getClass().getName());
       }
       return;
@@ -241,7 +243,7 @@ class AXEJobDesc {
           }
         }
         if (assumptionNotTrue) {
-          Log.error("Distinct agg parameter not in agg key for hash mode" + aggregationDesc.getExprString());
+          Log.warn("Distinct agg parameter not in agg key for hash mode " + aggregationDesc.getExprString());
         }
       }
     }
