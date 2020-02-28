@@ -67,7 +67,7 @@ class AXEJoinOperator extends AXEOperator {
     }
   }
 
-  class JoinCondition {
+  static class JoinCondition {
     final int left;
     final int right;
     final int type;
