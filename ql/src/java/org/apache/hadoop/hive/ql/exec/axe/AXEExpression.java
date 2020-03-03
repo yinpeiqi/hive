@@ -44,7 +44,7 @@ class AXEExpression {
     } else if (funcDesc.getGenericUDF() instanceof GenericUDFOPOr) {
       return "Or";
     } else if (funcDesc.getGenericUDF() instanceof GenericUDFBridge) {
-      return ((GenericUDFBridge)funcDesc.getGenericUDF()).getUdfName();
+      return funcDesc.getGenericUDF().getUdfName();
     }
     return funcDesc.getGenericUDF().getClass().getSimpleName().substring(10).toLowerCase();
   }
