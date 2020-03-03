@@ -1,6 +1,5 @@
 package org.apache.hadoop.hive.ql.exec.axe;
 
-import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.JoinCondDesc;
 
@@ -13,12 +12,12 @@ class AXEJoinOperator extends AXEOperator {
   Byte[] tagOrder;
   Map<Byte, List<AXEExpression>> joinValueExprs;
   List<String> outputColumnNames;
-  private List<List<JoinColumn>> joinTableColumns;
+  private List<List<AXEExpression>> joinKeyExprs;
   private List<JoinCondition> joinConditions;
 
   AXEJoinOperator(int id) {
     super(id);
-    joinTableColumns = new ArrayList<>();
+    joinKeyExprs = new ArrayList<>();
     joinConditions = new ArrayList<>();
   }
 
@@ -27,16 +26,9 @@ class AXEJoinOperator extends AXEOperator {
       return;
     }
     for (int keyIdx = 0; keyIdx < joinKeys.length; ++keyIdx) {
-      joinTableColumns.add(new ArrayList<JoinColumn>());
+      joinKeyExprs.add(new ArrayList<AXEExpression>());
       for (int k = 0; k < joinKeys[keyIdx].length; ++k) {
-        if (joinKeys[keyIdx][k] instanceof ExprNodeColumnDesc) {
-          ExprNodeColumnDesc columnDesc = (ExprNodeColumnDesc) joinKeys[keyIdx][k];
-          joinTableColumns.get(keyIdx).add(
-              new JoinColumn(columnDesc.getTabAlias(), columnDesc.getColumn(), columnDesc.getTypeInfo().getTypeName()));
-        } else {
-          throw new IllegalStateException(
-              "Expected only column desc in join keys, but got " + joinKeys[keyIdx][k].getClass().getName());
-        }
+        joinKeyExprs.get(keyIdx).add(new AXEExpression(joinKeys[keyIdx][k]));
       }
     }
   }
