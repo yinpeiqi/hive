@@ -41,6 +41,7 @@ class AXEJobDesc {
   protected final Logger LOG = LoggerFactory.getLogger(AXETask.class);
   private final Map<String, Integer> taskNameToId;
   private final Map<String, Integer> tableNameToId;
+  private final Map<String, AXEReduceSinkOperator> seenRSOperators = new HashMap<>();
   String currentStageName;
   private int counter;
 
@@ -96,6 +97,9 @@ class AXEJobDesc {
 
   private AXEReduceSinkOperator addReduceSinkOperator(final ReduceSinkOperator operator,
       final Map<String, Integer> inputColIndex) {
+    if (seenRSOperators.containsKey(operator.getOperatorId())) {
+      return seenRSOperators.get(operator.getOperatorId());
+    }
     AXEReduceSinkOperator rsOp = new AXEReduceSinkOperator(addTask(operator.getName()));
 
     rsOp.reduceOutputName = operator.getReduceOutputName();
@@ -113,6 +117,7 @@ class AXEJobDesc {
     }
 
     output.reduceSinkOperators.add(rsOp);
+    seenRSOperators.put(operator.getOperatorId(), rsOp);
     return rsOp;
   }
 
