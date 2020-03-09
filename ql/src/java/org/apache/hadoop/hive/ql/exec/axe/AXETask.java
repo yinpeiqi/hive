@@ -94,7 +94,7 @@ public class AXETask extends Task<AXEWork> {
 
     // Specify dependency
     Set<BaseWork> expandedWork = new HashSet<>();
-    for (BaseWork task : work.getRoots()) {
+    for (BaseWork task : work.getLeaves()) {
       addDependenciesToJson(task, workAXEOperatorMap, expandedWork);
     }
 
@@ -118,13 +118,13 @@ public class AXETask extends Task<AXEWork> {
       return;
     }
     expandedWork.add(task);
-    AXEOperator parentOp = workAXEOperatorMap.get(task);
-    List<BaseWork> children = work.getChildren(task);
-    for (BaseWork child : children) {
-      AXEOperator childOp = workAXEOperatorMap.get(child);
+    AXEOperator childOp = workAXEOperatorMap.get(task);
+    List<BaseWork> parents = work.getParents(task);
+    for (BaseWork parent: parents) {
+      AXEOperator parentOp = workAXEOperatorMap.get(parent);
       parentOp.addChild(childOp.id);
       childOp.addParent(parentOp.id);
-      addDependenciesToJson(child, workAXEOperatorMap, expandedWork);
+      addDependenciesToJson(parent, workAXEOperatorMap, expandedWork);
     }
   }
 
