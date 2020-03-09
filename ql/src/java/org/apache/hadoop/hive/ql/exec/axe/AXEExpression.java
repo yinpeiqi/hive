@@ -71,7 +71,7 @@ class AXEExpression {
     } else if (exprNodeDesc instanceof ExprNodeConstantDesc) {
       ExprNodeConstantDesc constantDesc = (ExprNodeConstantDesc) exprNodeDesc;
       node.type = constantDesc.getTypeString();
-      if (constantDesc.getTypeString().equals("string")) {
+      if (constantDesc.getTypeString().equals("string") || (constantDesc.getTypeString().length() > 5 && constantDesc.getTypeString().substring(0,5).equals("char("))) {
         if (constantDesc.getValue() != null) {
           node.value = constantDesc.getValue().toString();
         }
