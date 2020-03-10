@@ -46,7 +46,10 @@ class AXEExpression {
     } else if (funcDesc.getGenericUDF() instanceof GenericUDFBridge) {
       return funcDesc.getGenericUDF().getUdfName();
     }
-    return funcDesc.getGenericUDF().getClass().getSimpleName().substring(10).toLowerCase();
+    if (funcDesc.getGenericUDF().getClass().getSimpleName().substring(0, 10).equals("GenericUDF")) {
+      return funcDesc.getGenericUDF().getClass().getSimpleName().substring(10).toLowerCase();
+    }
+    return funcDesc.getGenericUDF().getClass().getSimpleName().toLowerCase();
   }
 
   private int processExpr(int nodeId, ExprNodeDesc exprNodeDesc, Deque<ObjectPair<ExprNodeDesc, Integer>> queue,
