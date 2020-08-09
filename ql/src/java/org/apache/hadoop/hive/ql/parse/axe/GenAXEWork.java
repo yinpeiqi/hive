@@ -113,7 +113,7 @@ public class GenAXEWork implements NodeProcessor {
       // remember the output name of the reduce sink
       reduceSink.getConf().setOutputName(reduceWork.getName());
       axeWork.add(reduceWork);
-      SparkEdgeProperty edgeProp = getEdgeProperty(reduceSink, reduceWork);
+      SparkEdgeProperty edgeProp = getEdgeProperty(context.conf, reduceSink, reduceWork);
 
       axeWork.connect(context.precedingWork, reduceWork, edgeProp);
       return reduceWork;
@@ -237,7 +237,7 @@ public class GenAXEWork implements NodeProcessor {
                                     "AssertionError: expected operator to be a ReduceSinkOperator, but was "
                                         + parent.getClass().getName());
         ReduceSinkOperator rsOp = (ReduceSinkOperator) parent;
-        SparkEdgeProperty edgeProp = getEdgeProperty(rsOp, reduceWork);
+        SparkEdgeProperty edgeProp = getEdgeProperty(context.conf, rsOp, reduceWork);
 
         rsOp.getConf().setOutputName(reduceWork.getName());
         GenMapRedUtils.setKeyAndValueDesc(reduceWork, rsOp);

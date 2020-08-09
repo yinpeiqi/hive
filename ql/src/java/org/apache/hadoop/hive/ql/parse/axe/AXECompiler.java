@@ -304,8 +304,8 @@ public class AXECompiler extends TaskCompiler {
       // If underlying data is RCFile a RCFileBlockMerge task would be created.
       LOG.info("using CombineHiveInputFormat for the merge job");
       GenMapRedUtils.createMRWorkForMergingFiles(fileSink, finalName,
-                                                 context.dependencyTask, context.moveTask,
-                                                 hconf, context.currentTask);
+                                                 context.dependencyTask, context.moveTask, hconf,
+                                                 context.currentTask, parseContext.getQueryState().getLineageState());
     }
 
     FetchTask fetchTask = parseContext.getFetchTask();
