@@ -36,7 +36,6 @@ import org.apache.hadoop.hive.ql.lib.TypeRule;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.optimizer.GenMapRedUtils;
 import org.apache.hadoop.hive.ql.optimizer.SetReducerParallelism;
-import org.apache.hadoop.hive.ql.optimizer.SparkRemoveDynamicPruningBySize;
 import org.apache.hadoop.hive.ql.optimizer.axe.AXEReduceSinkMapJoinProc;
 import org.apache.hadoop.hive.ql.optimizer.axe.CombineEquivalentWorkResolver;
 import org.apache.hadoop.hive.ql.optimizer.axe.SetAXEReducerParallelism;
@@ -207,10 +206,6 @@ public class AXECompiler extends TaskCompiler {
     opRules.put(new TypeRule(JoinOperator.class), new SparkJoinOptimizer(pCtx));
 
     opRules.put(new TypeRule(MapJoinOperator.class), new SparkJoinHintOptimizer(pCtx));
-
-    opRules.put(new RuleRegExp("Disabling Dynamic Partition Pruning By Size",
-                               SparkPartitionPruningSinkOperator.getOperatorName() + "%"),
-                new SparkRemoveDynamicPruningBySize());
 
     // The dispatcher fires the processor corresponding to the closest matching
     // rule and passes the context along
