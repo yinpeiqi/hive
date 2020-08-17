@@ -45,6 +45,7 @@ import org.apache.hadoop.hive.ql.plan.MapredLocalWork;
 import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.MoveWork;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
+import org.apache.hadoop.hive.ql.exec.axe.AXEWork;
 import org.apache.hadoop.hive.ql.plan.StatsWork;
 import org.apache.hadoop.hive.ql.plan.TezWork;
 import org.slf4j.Logger;
@@ -86,6 +87,11 @@ public class QueryPlanPostProcessor {
       }
       else if(work instanceof SparkWork) {
         for(BaseWork bw : ((SparkWork)work).getRoots()) {
+          collectFileSinkDescs(bw.getAllLeafOperators(), acidSinks);
+        }
+      }
+      else if(work instanceof AXEWork) {
+        for(BaseWork bw : ((AXEWork)work).getRoots()) {
           collectFileSinkDescs(bw.getAllLeafOperators(), acidSinks);
         }
       }
