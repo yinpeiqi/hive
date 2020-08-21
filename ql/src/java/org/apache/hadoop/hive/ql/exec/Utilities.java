@@ -2632,25 +2632,8 @@ public final class Utilities {
     return getTasks(tasks, new TaskFilterFunction<>(ExecDriver.class));
   }
 
-  private static void getAXETasks(List<Task<? extends Serializable>> tasks,
-      List<AXETask> axeTasks) {
-    for (Task<? extends Serializable> task : tasks) {
-      if ((task instanceof AXETask) && !axeTasks.contains(task)) {
-        axeTasks.add((AXETask) task);
-      }
-
-      if (task.getDependentTasks() != null) {
-        getAXETasks(task.getDependentTasks(), axeTasks);
-      }
-    }
-  }
-
   public static List<AXETask> getAXETasks(List<Task<? extends Serializable>> tasks) {
-    List<AXETask> axeTasks = new ArrayList<>();
-    if (tasks != null) {
-      getAXETasks(tasks, axeTasks);
-    }
-    return axeTasks;
+    return getTasks(tasks, new TaskFilterFunction<>(AXETask.class));
   }
 
   public static int getNumClusterJobs(List<Task<? extends Serializable>> tasks) {
