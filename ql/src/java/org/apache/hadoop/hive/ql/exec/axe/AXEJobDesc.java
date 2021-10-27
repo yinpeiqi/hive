@@ -227,7 +227,7 @@ class AXEJobDesc {
   private AXEGroupByOperator addGroupByOperator(final GroupByOperator groupByOperator) {
     AXEGroupByOperator gbOp = new AXEGroupByOperator(addTask(groupByOperator.getName()));
     GroupByDesc groupByDesc = groupByOperator.getConf();
-    gbOp.outputColumnNames = groupByOperator.getConf().getOutputColumnNames();
+    gbOp.outputColumnNames = groupByDesc.getOutputColumnNames();
     gbOp.setAggregatorKeys(groupByDesc.getKeys());
     gbOp.setAggregators(groupByDesc.getAggregators());
     for (AggregationDesc aggregationDesc : groupByDesc.getAggregators()) {
@@ -253,6 +253,9 @@ class AXEJobDesc {
       }
     }
     gbOp.setMode(groupByDesc.getMode().name());
+    gbOp.setGroupingSetsPresent(groupByDesc.isGroupingSetsPresent());
+    gbOp.setGroupingSetsPosition(groupByDesc.getGroupingSetPosition());
+    gbOp.setGroupingSets(groupByDesc.getListGroupingSets());
     gbOp.setBucketGroup(groupByDesc.getBucketGroup());
     output.groupByOperators.add(gbOp);
     return gbOp;
