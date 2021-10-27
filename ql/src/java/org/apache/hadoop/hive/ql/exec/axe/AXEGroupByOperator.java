@@ -14,6 +14,9 @@ class AXEGroupByOperator extends AXEOperator {
   private List<AXEExpression> aggregatorKeys;
   private List<Aggregator> aggregators;
   private String mode;
+  private boolean groupingSetsPresent;
+  private int groupingSetsPosition;
+  private List<Integer> groupingSets;
   private boolean bucketGroup;
 
   AXEGroupByOperator(int id) {
@@ -44,7 +47,22 @@ class AXEGroupByOperator extends AXEOperator {
   public void setMode(final String mode) {
     this.mode = mode;
   }
-
+  
+  public void setGroupingSetsPresent(final boolean groupingSetsPresent) {
+    this.groupingSetsPresent = groupingSetsPresent;
+  }
+  
+  public void setGroupingSetsPosition(final int groupingSetsPosition) {
+    this.groupingSetsPosition = groupingSetsPosition;
+  }
+  
+  public void setGroupingSets(List<Integer> groupingSets) {
+    this.groupingSets = new ArrayList<>();
+    for (Integer groupingSet : groupingSets) {
+      this.groupingSets.add(groupingSet);
+    }
+  }
+  
   void setBucketGroup(final boolean bucketGroup) { this.bucketGroup = bucketGroup; }
 
   @SuppressWarnings("unused")
