@@ -254,8 +254,10 @@ class AXEJobDesc {
     }
     gbOp.setMode(groupByDesc.getMode().name());
     gbOp.setGroupingSetsPresent(groupByDesc.isGroupingSetsPresent());
-    gbOp.setGroupingSetsPosition(groupByDesc.getGroupingSetPosition());
-    gbOp.setGroupingSets(groupByDesc.getListGroupingSets());
+    if (groupByDesc.isGroupingSetsPresent()) {
+        gbOp.setGroupingSetsPosition(groupByDesc.getGroupingSetPosition());
+        gbOp.setGroupingSets(groupByDesc.getListGroupingSets());
+    }
     gbOp.setBucketGroup(groupByDesc.getBucketGroup());
     output.groupByOperators.add(gbOp);
     return gbOp;
