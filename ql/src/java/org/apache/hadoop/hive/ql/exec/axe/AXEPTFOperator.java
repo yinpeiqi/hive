@@ -21,6 +21,7 @@ class AXEPTFOperator extends AXEOperator {
   private final List<Order> orderExprs = new ArrayList<>();
   private final List<AXEExpression> partitionExprs = new ArrayList<>();
   private final List<WindowFunction> windowFunctions = new ArrayList<>();
+  private int rankLimit = -1;
   private List<String> outputColumnNames;
 
   AXEPTFOperator(final int id) {
@@ -46,8 +47,7 @@ class AXEPTFOperator extends AXEOperator {
     // order, partition and rank limit
     setOrder(windowTableFunctionDef.getOrder());
     setPartition(windowTableFunctionDef.getPartition());
-    Preconditions.checkArgument(windowTableFunctionDef.getRankLimit() == -1, "Not supporting rank limit for now");
-
+    setRankLimit(windowTableFunctionDef.getRankLimit());
   }
 
   private void setPartition(final PartitionDef partitionDef) {
@@ -65,7 +65,11 @@ class AXEPTFOperator extends AXEOperator {
                                new AXEExpression(orderExpressionDef.getExprNode())));
     }
   }
-
+  
+  private void setRankLimit(final int limit) {
+    rankLimit = limit;
+  }
+  
   private void setWindowFunction(List<WindowFunctionDef> windowFunctionDefs) {
     // always complete mode
     for (WindowFunctionDef windowFunctionDef : windowFunctionDefs) {
