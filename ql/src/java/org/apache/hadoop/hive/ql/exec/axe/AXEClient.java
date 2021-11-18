@@ -1,6 +1,9 @@
 package org.apache.hadoop.hive.ql.exec.axe;
 
+import org.apache.hadoop.hive.common.io.CachingPrintStream;
 import org.apache.hadoop.hive.ql.DriverContext;
+import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hive.common.util.StreamPrinter;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,11 +22,9 @@ class AXEClient {
 
   void submitJob(final String jobSubmit, final String jsonPath) throws IOException {
     String configFile = createConfigFile(jsonPath);
-    ProcessBuilder processBuilder = new ProcessBuilder();
-    List<String> command = processBuilder.command();
-    command.add(jobSubmit);
-    command.add("--conf");
-    command.add(configFile);
+    String cmdLine = "python " + jobSubmit + "/submit-job.py --config " + jobSubmit + "/job.json";
+    // Run ExecDriver in another JVM
+    Process executor = Runtime.getRuntime().exec(cmdLine);
     // FIXME: job status monitor
   }
 
