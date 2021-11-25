@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.exec.axe.AXETask;
+import org.apache.hadoop.hive.ql.exec.axe.AXEWork;
 import org.apache.hadoop.hive.ql.exec.mr.MapRedTask;
 import org.apache.hadoop.hive.ql.exec.mr.MapredLocalTask;
 import org.apache.hadoop.hive.ql.exec.spark.SparkTask;
@@ -108,6 +110,7 @@ public final class TaskFactory {
         IndexMetadataChangeTask.class));
     taskvec.add(new TaskTuple<TezWork>(TezWork.class, TezTask.class));
     taskvec.add(new TaskTuple<SparkWork>(SparkWork.class, SparkTask.class));
+    taskvec.add(new TaskTuple<>(AXEWork.class, AXETask.class));
 
   }
 

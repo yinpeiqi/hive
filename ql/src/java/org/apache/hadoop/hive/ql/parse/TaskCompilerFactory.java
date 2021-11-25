@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.parse;
 
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.parse.axe.AXECompiler;
 import org.apache.hadoop.hive.ql.parse.spark.SparkCompiler;
 
 /**
@@ -40,6 +41,8 @@ public class TaskCompilerFactory {
       return new TezCompiler();
     } else if (HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("spark")) {
       return new SparkCompiler();
+    } else if (HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("axe")) {
+      return new AXECompiler();
     } else {
       return new MapReduceCompiler();
     }
